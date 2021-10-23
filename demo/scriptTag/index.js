@@ -1,0 +1,121 @@
+const imgBox = {}
+
+var hashParams = {}
+localStorage.hashParams = ""
+
+const loadHashParams = async () => {
+  // Load hash parameters from the URL.
+  const previousHashParams = window.localStorage.hashParams ? JSON.parse(window.localStorage.hashParams) : {}
+  hashParams = {}
+
+  if (window.location.hash.includes("=")) {
+    
+    window.location.hash.slice(1).split('&').forEach( (param) => {
+      let [key, value] = param.split('=')
+      value = value.replace(/['"]+/g, "") // for when the hash parameter contains quotes.
+      value = decodeURIComponent(value)
+      hashParams[key] = value
+    })
+  
+  }
+  
+  if (hashParams["fileURL"] && previousHashParams?.fileURL !== hashParams["fileURL"]) {
+    if (!previousHashParams["fileURL"]) {
+      setTimeout(() => imgBox.loadImage(hashParams["fileURL"]), 2000)
+    } else {
+      imgBox.loadImage(hashParams["fileURL"])
+    }
+  }
+
+  if (hashParams.wsiCenterX && hashParams.wsiCenterY && hashParams.wsiZoom) {
+    imgBox.handlePanAndZoom(hashParams.wsiCenterX, hashParams.wsiCenterY, hashParams.wsiZoom)
+  }
+
+  window.localStorage.hashParams = JSON.stringify(hashParams)
+}
+
+imgBox.modifyHashString = (hashObj, removeFromHistory=false) => {
+  // hashObj contains hash keys with corresponding values to update..
+  let hash = decodeURIComponent(window.location.hash)
+  
+  Object.entries(hashObj).forEach(([key, val]) => {
+    if (val && val !== hashParams[key]) {
+     
+      if (hashParams[key]) {
+        hash = hash.replace(`${key}=${hashParams[key]}`, `${key}=${val}`)
+      } 
+      else {
+        hash += hash.length > 0 ? "&" : ""
+        hash += `${key}=${val}`
+      }
+  
+    } 
+    
+    else if (!val) {
+      const param = `${key}=${hashParams[key]}`
+      const paramIndex = hash.indexOf(param)
+      
+      if (hash[paramIndex-1] === "&") {  // if hash is of the form "...&q=123...", remove preceding & as well.
+        hash = hash.replace(`&${param}`, "")
+      } 
+      
+      else if (hash[paramIndex + param.length] === "&") { // if hash is of the form "#q=123&...", remove following & as well.
+        hash = hash.replace(`${param}&`, "")
+      } 
+      
+      else { // if hash is just #q=123, remove just the param.
+        hash = hash.replace(param, "")
+      }
+    }
+  })
+  
+  window.location.hash = hash
+
+  if (removeFromHistory) {
+    history.replaceState({}, '', window.location.pathname + window.location.hash)
+  }
+}
+
+imgBox.loadTile = async () => {
+  const fileURL = document.getElementById("imageURL").value
+  const tileTopX = document.getElementById("topX").value
+  const tileTopY = document.getElementById("topY").value
+  const tileWidth = document.getElementById("tileW").value
+  const tileHeight = document.getElementById("tileH").value
+  const tileWidthToRender = document.getElementById("imageW").value
+  // const imageH = document.getElementById("imageH").value
+  document.getElementById("tile").src = URL.createObjectURL(await (await getImageTile(decodeURIComponent(fileURL), {
+    tileTopX,
+    tileTopY,
+    tileWidth,
+    tileHeight,
+    tileWidthToRender
+  })).blob())
+
+}
+
+imgBox.loadImage = async (url="https://storage.googleapis.com/imagebox_test/Slide-0027830_Y561170_1002408.svs") => {
+  document.getElementById("imageURL").value = url
+  imgBox.loadTile()
+}
+
+imgBox.changeImage = () => {
+  const fileURL = document.getElementById("imageURL").value
+  imgBox.modifyHashString({fileURL}, false)
+}
+
+window.onload = async () => {
+  const tileServerScript = document.createElement("script")
+  tileServerScript.src = `${location.origin}/imageBox3.js`
+  document.head.appendChild(tileServerScript)
+
+  loadHashParams()
+  
+  if (!hashParams["fileURL"]) {
+    setTimeout(()=>imgBox.loadImage(), 2000)
+    // imgBox.loadDefaultImage()
+  }
+
+}
+
+window.onhashchange = loadHashParams

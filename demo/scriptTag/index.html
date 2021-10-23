@@ -1,0 +1,72 @@
+<html>
+
+<head>
+  <title>ImageBox3.0 WSI Viewer</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+  <script type="text/javascript"
+  src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap.native/2.0.27/bootstrap-native-v4.min.js" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/openseadragon@latest/build/openseadragon/openseadragon.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="imgBox.css">
+  <script src="index.js"></script>
+</head>
+
+<body>
+
+  <div class="container-fluid">
+
+    <div id="header">
+
+      <h1>ImageBox3.0
+        <sup>
+          [<a href="https://github.com/episphere/imagebox3" target="_blank">code</a>]
+          [<a href="https://github.com/episphere/imagebox3/issues/new" target="_blank">issues</a>]
+        </sup>
+      </h1>
+
+      
+      <p id="welcomeMsg" onclick="imgBox.loadDefaultImage()">Welcome!</p>
+      
+    </div>
+    <hr>
+    <div id="viewer" style="width:256; height:256; background-color: black;">
+      <img id="tile"></img>
+    </div>
+    <hr>
+    <div id="imageParams">
+      <div id="imageURLInp">
+        <label for="imageURL">WSI URL: </label>
+        <input type="text" req id="imageURL" onkeyup="if (event.key === 'Enter') imgBox.changeImage()">
+        <button type="submit" id="imageURLSubmit" class="btn btn-outline-info" onclick="imgBox.changeImage()">
+          <i class="bi bi-cloud-download"></i>
+        </button>
+      </div>
+      <div id="topXInp">
+        <label>Top X: </label>
+        <input type="number" id="topX" value="8000" min="0" onchange="imgBox.loadTile()">
+      </div>
+      <div id="topYInp">
+        <label>Top Y: </label>
+        <input type="number" id="topY" value="8000" min="0" onchange="imgBox.loadTile()">
+      </div>
+      <div id="tileWInp">
+        <label>Tile Width: </label>
+        <input type="number" id="tileW" value="2048" min="0" max="8192" onchange="imgBox.loadTile()">
+      </div>
+      <div id="tileHInp">
+        <label>Tile Height: </label>
+        <input type="number" id="tileH" value="2048" min="0" max="8192" onchange="imgBox.loadTile()">
+      </div>
+      <div id="imageWInp">
+        <label>Image Width: </label>
+        <input type="number" id="imageW" value="256" min="0" max="8192" placeholder="256" onchange="imgBox.loadTile()">
+      </div>
+      <!-- <label>Image Height: </label>
+        <input type="number" id="imageH" value="256" placeholder="256" min="0" onchange="imgBox.loadTile()"> -->
+    </div>
+
+  </div>
+
+</body>
+
+</html>
