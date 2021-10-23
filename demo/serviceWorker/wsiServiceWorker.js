@@ -1,6 +1,4 @@
-const tileServerPathSuffix = "iiif"
-const tileServerBasePath = `${location.origin}/${tileServerPathSuffix}`
-importScripts(`${location.origin}/imageBox3.js`)
+importScripts(`https://episphere.github.io/imageBox3/imageBox3.js`)
 
 self.oninstall = () => {
   self.skipWaiting()
