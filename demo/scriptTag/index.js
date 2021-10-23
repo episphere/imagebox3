@@ -83,7 +83,6 @@ imgBox.loadTile = async () => {
   const tileWidth = document.getElementById("tileW").value
   const tileHeight = document.getElementById("tileH").value
   const tileWidthToRender = document.getElementById("imageW").value
-  // const imageH = document.getElementById("imageH").value
   document.getElementById("tile").src = URL.createObjectURL(await (await getImageTile(decodeURIComponent(fileURL), {
     tileTopX,
     tileTopY,
@@ -105,15 +104,11 @@ imgBox.changeImage = () => {
 }
 
 window.onload = async () => {
-  const tileServerScript = document.createElement("script")
-  tileServerScript.src = `${location.origin}/imageBox3.js`
-  document.head.appendChild(tileServerScript)
 
   loadHashParams()
   
   if (!hashParams["fileURL"]) {
-    setTimeout(()=>imgBox.loadImage(), 2000)
-    // imgBox.loadDefaultImage()
+    imgBox.loadImage()
   }
 
 }
