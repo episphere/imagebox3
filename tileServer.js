@@ -1,17 +1,5 @@
 let tiff = {}
-
-let utils = {
-  parseTileParams: (tileParams) => {
-    const parsedTileParams = Object.entries(tileParams).reduce((parsed, [key, val]) => {
-      if (val) {
-        parsed[key] = parseInt(val)
-      }
-      return parsed
-    }, {})
-
-    return parsedTileParams
-  }
-}
+const imageInfoContext = "http://iiif.io/api/image/2/context.json"
 
 const getImageInfo = async (imageIdentifier) => {
   let pixelsPerMeter
@@ -204,5 +192,3 @@ const convertToImage = async (data, width, height) => {
   const response = new Response(blob, { status: 200 })
   return response
 }
-
-export {getImageInfo, getImageThumbnail, getImageTile}
