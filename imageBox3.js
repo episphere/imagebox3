@@ -7,13 +7,13 @@ ENVIRONMENT_IS_SERVICE_WORKER = ENVIRONMENT_IS_WEB_WORKER && typeof ServiceWorke
 
 if (ENVIRONMENT_IS_WEB_WORKER) {
   importScripts(GEOTIFF_LIB_URL)
-  importScripts("./tileServer.js")
+  importScripts("https://episphere.github.io/imageBox3/tileServer.js")
 }
 else {
   const GeoTIFFScript = document.createElement("script")
   GeoTIFFScript.src = GEOTIFF_LIB_URL
   const tileServerScript = document.createElement("script")
-  tileServerScript.src = "./tileServer.js"
+  tileServerScript.src = "https://episphere.github.io/imageBox3/tileServer.js"
   document.head.appendChild(GeoTIFFScript)
   document.head.appendChild(tileServerScript)
 }
