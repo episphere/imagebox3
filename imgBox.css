@@ -46,6 +46,10 @@ a:hover {
   margin-block-end: 0;
 }
 
+#imageURLTextboxParent {
+  margin: auto;
+}
+
 #imageParams {
   margin: auto;
   display: grid;
