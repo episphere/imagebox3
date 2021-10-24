@@ -289,7 +289,7 @@ imgBox.addServiceWorker = () => new Promise((resolve, reject) => {
 		.then(async reg => {
 		  
       console.log('Service worker registration succeeded! Scope is:', reg.scope)
-      resolve()
+      setTimeout(resolve, 1000) // wait for service worker to be ready
 		
     }).catch((error) => {
 		  console.log('Service worker registration failed', error)
