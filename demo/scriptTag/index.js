@@ -103,14 +103,20 @@ imgBox.changeImage = () => {
   imgBox.modifyHashString({fileURL}, false)
 }
 
-window.onload = async () => {
+if(typeof(define)!='undefined'){
+  // enable require
+  define(imgBox)
+}else{
+    window.onload = async () => {
 
-  loadHashParams()
-  
-  if (!hashParams["fileURL"]) {
-    imgBox.loadImage()
+    loadHashParams()
+
+    if (!hashParams["fileURL"]) {
+      imgBox.loadImage()
+    }
+
   }
-
+  window.onhashchange = loadHashParams
 }
 
-window.onhashchange = loadHashParams
+
