@@ -1,3 +1,5 @@
-hello={hello:'world'};
+function hello(who='world'){
+    return {hello:who}
+}
 
 export {hello}
