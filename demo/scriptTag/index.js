@@ -83,7 +83,7 @@ imgBox.loadTile = async () => {
   const tileWidth = document.getElementById("tileW").value
   const tileHeight = document.getElementById("tileH").value
   const tileWidthToRender = document.getElementById("imageW").value
-  document.getElementById("tile").src = URL.createObjectURL(await (await getImageTile(decodeURIComponent(fileURL), {
+  document.getElementById("tile").src = URL.createObjectURL(await (await imageBox3.getImageTile(decodeURIComponent(fileURL), {
     tileTopX,
     tileTopY,
     tileWidth,
