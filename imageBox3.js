@@ -1,23 +1,32 @@
 /* Setup the library: determine execution environment,
  * correspondingly import dependencies (GeoTIFF.js)
  */
-var imageBox3 = (() => {
-  const GEOTIFF_LIB_URL = "https://cdn.jsdelivr.net/npm/geotiff@1.0.4/dist-browser/geotiff.js"
-
+export default imageBox3 = () => {
+  
   const ENVIRONMENT_IS_WEB = typeof window === "object" && self instanceof Window,
   ENVIRONMENT_IS_NODE = !ENVIRONMENT_IS_WEB && typeof process === "object" ,
   ENVIRONMENT_IS_WEB_WORKER = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && typeof WorkerGlobalScope === "function" && self instanceof WorkerGlobalScope,
   ENVIRONMENT_IS_SERVICE_WORKER = ENVIRONMENT_IS_WEB_WORKER && typeof ServiceWorkerGlobalScope === "function" && self instanceof ServiceWorkerGlobalScope
+  
+  const loadGeoTIFF = () => {
+    const GeoTIFFDistro = ENVIRONMENT_IS_NODE ? "node" : "browser"
+    const GEOTIFF_LIB_URL = `https://cdn.jsdelivr.net/npm/geotiff`
+    if (ENVIRONMENT_IS_WEB_WORKER) {
+      importScripts(GEOTIFF_LIB_URL)
+      // importScripts(`https://episphere.github.io/imageBox3/tileServer.js`)
+    }
+    else if (ENVIRONMENT_IS_WEB) {
+      const GeoTIFFScript = document.createElement("script")
+      GeoTIFFScript.src = GEOTIFF_LIB_URL
+      document.head.appendChild(GeoTIFFScript)
+    } else if (ENVIRONMENT_IS_NODE) {
+      import(GEOTIFF_LIB_URL).then((geotiff) => {
+        GeoTIFF = geotiff.default()
+      })
 
-  if (ENVIRONMENT_IS_WEB_WORKER) {
-    importScripts(GEOTIFF_LIB_URL)
-    // importScripts(`https://episphere.github.io/imageBox3/tileServer.js`)
+    }
   }
-  else if (ENVIRONMENT_IS_WEB) {
-    const GeoTIFFScript = document.createElement("script")
-    GeoTIFFScript.src = GEOTIFF_LIB_URL
-    document.head.appendChild(GeoTIFFScript)
-  }
+  loadGeoTIFF()
 
   let utils = {
     loadTileServerURL: () => {
@@ -86,7 +95,7 @@ var imageBox3 = (() => {
 
   return {}
 
-})();
+}
 
 (function($){
   let tiff = {}
@@ -302,3 +311,9 @@ var imageBox3 = (() => {
   })
 
 })(imageBox3)
+
+if (typeof module !== "undefined") {
+  module.exports = imageBox3
+} else if (typeof define === "function" && define.amd) {
+  define([], () => imageBox3)
+}
