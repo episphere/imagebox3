@@ -87,7 +87,7 @@ const loadHashParams = async () => {
   window.localStorage.hashParams = JSON.stringify(hashParams)
 }
 
-imgBox.modifyHashString = (hashObj, removeFromHistory=false) => {
+imgBox.modifyHashString = (hashObj, removeFromHistory=true) => {
   // hashObj contains hash keys with corresponding values to update..
   let hash = decodeURIComponent(window.location.hash)
   
@@ -210,7 +210,7 @@ imgBox.createTileSource = async (url) => {
 
 imgBox.urlSatisfiesConstraints = (url) => {
   // Check URL length and add to the URL text field if not already present.
-  document.getElementById("imageURL").value = url
+  document.getElementById("imageURLInput").value = url
   if (url.length < 256) {
     imgBox.modifyHashString({
       'fileURL': url
@@ -224,7 +224,7 @@ imgBox.urlSatisfiesConstraints = (url) => {
   return true
 }
 
-imgBox.loadImage = async (url=document.getElementById("imageURL").value) => {
+imgBox.loadImage = async (url=document.getElementById("imageURLInput").value) => {
   // Load the image.
   if (!imgBox.urlSatisfiesConstraints(url)) {
     return undefined
@@ -278,8 +278,8 @@ imgBox.removePanAndZoomFromHash = () => {
 }
 
 imgBox.loadDefaultImage = async () => {
-  const defaultWSIURL = "https://storage.googleapis.com/imagebox_test/Slide-0027830_Y561170_1002408.svs"
-  document.getElementById("imageURL").value = defaultWSIURL
+  const defaultWSIURL = "https://storage.googleapis.com/imagebox_test/openslide-testdata/Aperio/CMU-1.svs"
+  document.getElementById("imageURLInput").value = defaultWSIURL
   imgBox.loadImage(defaultWSIURL)
 }
 

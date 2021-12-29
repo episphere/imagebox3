@@ -46,6 +46,16 @@ a:hover {
   margin-block-end: 0;
 }
 
+#gridContainer {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  column-gap: 2rem;
+}
+
+#imageURLTextboxParent {
+  margin: auto;
+}
+
 #imageParams {
   margin: auto;
   display: grid;
@@ -54,9 +64,16 @@ a:hover {
   grid-gap: 10px;
 }
 
+#imageParams label {
+  margin-right: 0.25rem;
+}
+
 #imageURLInp {
-  grid-column-start: 1;
-  grid-column-end: 3;
+  margin-bottom: 10px;
+}
+
+#imageURLInput {
+  width: 500px;
 }
 
 #imageWInp {
@@ -64,12 +81,8 @@ a:hover {
   grid-column-end: 3;
 }
 
-label[for="imageURL"] {
+label[for="imageURLInput"] {
   padding-right: 0.5rem
-}
-
-#imageURL {
-  width: 20rem;
 }
 
 #imageURLSubmit {

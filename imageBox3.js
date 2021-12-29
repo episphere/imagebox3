@@ -16,7 +16,7 @@ var imageBox3 = (() => {
   else if (ENVIRONMENT_IS_WEB) {
     const GeoTIFFScript = document.createElement("script")
     GeoTIFFScript.src = GEOTIFF_LIB_URL
-    document.head.appendChild(GeoTIFFScript)
+    document.body.appendChild(GeoTIFFScript)
   }
 
   let utils = {
@@ -65,7 +65,7 @@ var imageBox3 = (() => {
         }
         
         else if (e.request.url.endsWith("/default.jpg")) {
-          regex = /\/(?<tileTopX>[0-9]+?),(?<tileTopY>[0-9]+?),(?<tileWidth>[0-9]+?),(?<tileHeight>[0-9]+?)\/(?<tileWidthToRender>[0-9]+?),[0-9]*?\/(?<tileRotation>[0-9]+?)\//
+          regex = /\/(?<tileX>[0-9]+?),(?<tileY>[0-9]+?),(?<tileWidth>[0-9]+?),(?<tileHeight>[0-9]+?)\/(?<tileSize>[0-9]+?),[0-9]*?\/(?<tileRotation>[0-9]+?)\//
           const tileParams = regex.exec(e.request.url).groups
           e.respondWith(imageBox3.getImageTile(decodeURIComponent(identifier), tileParams))
         }
@@ -88,7 +88,7 @@ var imageBox3 = (() => {
 
 })();
 
-(function($){
+(function($) {
   let tiff = {}
   const imageInfoContext = "http://iiif.io/api/image/2/context.json"
 
@@ -235,10 +235,10 @@ var imageBox3 = (() => {
   const getImageTile = async (imageIdentifier, tileParams) => {
     const parsedTileParams = utils.parseTileParams(tileParams)
     
-    const { tileTopX, tileTopY, tileWidth, tileHeight, tileWidthToRender } = parsedTileParams
+    const { tileX, tileY, tileWidth, tileHeight, tileSize } = parsedTileParams
     
-    if (!Number.isInteger(tileTopX) || !Number.isInteger(tileTopY) || !Number.isInteger(tileWidth) || !Number.isInteger(tileHeight) || !Number.isInteger(tileWidthToRender)) {
-      console.error("Tile Request missing critical parameters!", tileTopX, tileTopY, tileWidth, tileHeight, tileWidthToRender)
+    if (!Number.isInteger(tileX) || !Number.isInteger(tileY) || !Number.isInteger(tileWidth) || !Number.isInteger(tileHeight) || !Number.isInteger(tileSize)) {
+      console.error("Tile Request missing critical parameters!", tileX, tileY, tileWidth, tileHeight, tileSize)
       return
     }
 
@@ -246,23 +246,23 @@ var imageBox3 = (() => {
       await getImagesInPyramid(imageIdentifier, false)
     }
 
-    const tileWidthRatio = Math.floor(tileWidth / tileWidthToRender)
+    const tileWidthRatio = Math.floor(tileWidth / tileSize)
     const optimalImageIndex = await getImageIndexByRatio(imageIdentifier, tileWidthRatio)
 
     const optimalImageInTiff = await tiff[imageIdentifier].image.getImage(optimalImageIndex)
     const optimalImageWidth = optimalImageInTiff.getWidth()
     const optimalImageHeight = optimalImageInTiff.getHeight()
-    const tileHeightToRender = Math.floor( tileHeight * tileWidthToRender / tileWidth)
+    const tileHeightToRender = Math.floor( tileHeight * tileSize / tileWidth)
 
     const { maxWidth, maxHeight } = tiff[imageIdentifier].image
 
-    const tileInImageLeftCoord = Math.floor( tileTopX * optimalImageWidth / maxWidth )
-    const tileInImageTopCoord = Math.floor( tileTopY * optimalImageHeight / maxHeight )
-    const tileInImageRightCoord = Math.floor( (tileTopX + tileWidth) * optimalImageWidth / maxWidth )
-    const tileInImageBottomCoord = Math.floor( (tileTopY + tileHeight) * optimalImageHeight / maxHeight )
+    const tileInImageLeftCoord = Math.floor( tileX * optimalImageWidth / maxWidth )
+    const tileInImageTopCoord = Math.floor( tileY * optimalImageHeight / maxHeight )
+    const tileInImageRightCoord = Math.floor( (tileX + tileWidth) * optimalImageWidth / maxWidth )
+    const tileInImageBottomCoord = Math.floor( (tileY + tileHeight) * optimalImageHeight / maxHeight )
 
     const data = await optimalImageInTiff.readRasters({
-      width: tileWidthToRender,
+      width: tileSize,
       height: tileHeightToRender,
       window: [
         tileInImageLeftCoord,
@@ -272,7 +272,7 @@ var imageBox3 = (() => {
       ]
     })
 
-    const imageResponse = await convertToImage(data, tileWidthToRender, tileHeightToRender)
+    const imageResponse = await convertToImage(data, tileSize, tileHeightToRender)
     return imageResponse
   }
 
@@ -302,3 +302,5 @@ var imageBox3 = (() => {
   })
 
 })(imageBox3)
+
+export { imageBox3 }
