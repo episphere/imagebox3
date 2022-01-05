@@ -1,4 +1,4 @@
-import { imageBox3 } from "http://localhost:8081/imagebox3.js"
+import imagebox3 from "../../imagebox3.mjs"
 
 const imgBox = {}
 
@@ -85,7 +85,7 @@ imgBox.loadTile = async () => {
   const tileWidth = document.getElementById("tileW").value
   const tileHeight = document.getElementById("tileH").value
   const tileSize = document.getElementById("imageW").value
-  document.getElementById("tile").src = URL.createObjectURL(await (await imageBox3.getImageTile(decodeURIComponent(fileURL), {
+  document.getElementById("tile").src = URL.createObjectURL(await (await imagebox3.getImageTile(decodeURIComponent(fileURL), {
     tileX,
     tileY,
     tileWidth,
@@ -105,6 +105,7 @@ imgBox.changeImage = () => {
   imgBox.modifyHashString({fileURL}, false)
 }
 
+
 window.onload = async () => {
 
   loadHashParams()
@@ -116,3 +117,4 @@ window.onload = async () => {
 }
 
 window.onhashchange = loadHashParams
+window.imgBox = imgBox

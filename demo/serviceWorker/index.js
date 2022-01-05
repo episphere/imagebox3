@@ -208,26 +208,10 @@ imgBox.createTileSource = async (url) => {
   return tileSource
 }
 
-imgBox.urlSatisfiesConstraints = (url) => {
-  // Check URL length and add to the URL text field if not already present.
-  document.getElementById("imageURLInput").value = url
-  if (url.length < 256) {
-    imgBox.modifyHashString({
-      'fileURL': url
-    })
-  }
-  else {
-    //alert("URL String too long!")
-    return false
-  }
-  
-  return true
-}
-
 imgBox.loadImage = async (url=document.getElementById("imageURLInput").value) => {
   // Load the image.
-  if (!imgBox.urlSatisfiesConstraints(url)) {
-    return undefined
+  if (url !== document.getElementById("imageURLInput").value) {
+    document.getElementById("imageURLInput").value = url
   }
   
   if (!imgBox.progressBarMover) {
@@ -283,20 +267,16 @@ imgBox.loadDefaultImage = async () => {
   imgBox.loadImage(defaultWSIURL)
 }
 
-imgBox.addServiceWorker = () => new Promise((resolve, reject) => {
+imgBox.addServiceWorker = async () => {
 	if ('serviceWorker' in navigator) {
-		navigator.serviceWorker.register(`./wsiServiceWorker.js?tileServerPathSuffix=${tileServerPathSuffix}`)
-		.then(async reg => {
-		  
-      console.log('Service worker registration succeeded! Scope is:', reg.scope)
-      setTimeout(resolve, 1000) // wait for service worker to be ready
-		
-    }).catch((error) => {
-		  console.log('Service worker registration failed', error)
+    navigator.serviceWorker.register(`../../imagebox3.js?tileServerPathSuffix=${tileServerPathSuffix}`)
+		.catch((error) => {
+      console.log('Service worker registration failed', error)
       reject(error)
 		})
+    await navigator.serviceWorker.ready
 	}
-})
+}
 
 window.onload = async () => {
   await imgBox.addServiceWorker()

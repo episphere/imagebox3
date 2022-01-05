@@ -1,33 +1,20 @@
 /* Setup the library: determine execution environment,
  * correspondingly import dependencies (GeoTIFF.js)
  */
-GeoTIFF = {}
-  
-var imagebox3 = (() => {
-  
+
+import { fromUrl } from "https://cdn.skypack.dev/geotiff"
+
+const imagebox3 = (() => {
+
   const ENVIRONMENT_IS_WEB = typeof window === "object" && self instanceof Window,
   ENVIRONMENT_IS_NODE = !ENVIRONMENT_IS_WEB && typeof process === "object" ,
   ENVIRONMENT_IS_WEB_WORKER = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && typeof WorkerGlobalScope === "function" && self instanceof WorkerGlobalScope,
   ENVIRONMENT_IS_SERVICE_WORKER = ENVIRONMENT_IS_WEB_WORKER && typeof ServiceWorkerGlobalScope === "function" && self instanceof ServiceWorkerGlobalScope
-  
-  
-
-  const GEOTIFF_LIB_URL = {
-    "mjs": "https://cdn.skypack.dev/geotiff", // for the ES6 module (since service workers don't support dynamic imports yet)
-    "js": "https://cdn.jsdelivr.net/npm/geotiff@1.0.4/dist-browser/geotiff.js" // for service worker
-  }
-  if (ENVIRONMENT_IS_WEB_WORKER || ENVIRONMENT_IS_SERVICE_WORKER) {
-    importScripts(GEOTIFF_LIB_URL["js"])
-    GeoTIFF = self.GeoTIFF
-  } else if (ENVIRONMENT_IS_WEB) {
-    import(GEOTIFF_LIB_URL["mjs"]).then(lib => {
-      GeoTIFF = lib.GeoTIFF
-    })
-  }
 
   let utils = {
-    defineTileServerURL: () => {
+    loadTileServerURL: () => {
       // Load tile server base path from search params passed in service worker registration.
+      console.log(self.location)
       const urlSearchParams = new URLSearchParams(self.location.search)
       if (urlSearchParams.has("tileServerURL")) {
         return urlSearchParams.get("tileServerURL")
@@ -51,16 +38,7 @@ var imagebox3 = (() => {
 
   if (ENVIRONMENT_IS_SERVICE_WORKER) {
 
-    self.oninstall = () => {
-
-      self.skipWaiting()
-    }
-    
-    self.onactivate = () => {
-      self.clients.claim()
-    }
-
-    self.tileServerBasePath = utils.defineTileServerURL()
+    self.tileServerBasePath = utils.loadTileServerURL()
     self.addEventListener("fetch", (e) => {
       if (e.request.url.startsWith(self.tileServerBasePath)) {
         let regex = new RegExp(self.tileServerBasePath + "\/(?<identifier>.[^/]*)\/")
@@ -104,11 +82,12 @@ var imagebox3 = (() => {
 
 (function ($){
 
-  let tiff = {}
+  let tiff = {} // Variable to cache GeoTIFF instance per image for reuse.
   const imageInfoContext = "http://iiif.io/api/image/2/context.json"
 
   const utils = {
     parseTileParams: (tileParams) => {
+      // Parse tile params into tile coordinates and size
       const parsedTileParams = Object.entries(tileParams).reduce((parsed, [key, val]) => {
         if (val) {
           parsed[key] = parseInt(val)
@@ -117,16 +96,85 @@ var imagebox3 = (() => {
       }, {})
 
       return parsedTileParams
+    },
+    
+    getImageIndexByRatio: async (tiffPyramid, tileWidthRatio) => {
+      // Return the index of the appropriate image in the pyramid for the requested tile
+      // by comparing the ratio of the width of the requested tile and the requested resolution, 
+      // and comparing it against the ratios of the widths of all images in the pyramid to the largest image.
+      // This is a heuristic that is used to determine the best image to use for a given tile request.
+      // Could be optimized further.
+
+      if (!tiffPyramid.imageWidthRatios) {
+        tiffPyramid.imageWidthRatios = []
+      
+        for (let imageIndex = 0; imageIndex < tiffPyramid.loadedCount; imageIndex++) {
+          const imageWidth = (await tiffPyramid.getImage(imageIndex)).getWidth()
+          const maxImageWidth = tiffPyramid.maxWidth
+          tiffPyramid.imageWidthRatios.push(maxImageWidth / imageWidth)
+        } 
+      
+      }
+      
+      const sortedRatios = [...tiffPyramid.imageWidthRatios].sort((a, b) => a - b).slice(0, -1) // Remove thumbnail from consideration
+      
+      // If the requested resolution is less than 1/8th the requested tile width, the smallest image should suffice.
+      if (tileWidthRatio > 8) {
+        return tiffPyramid.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 1])
+      }
+      // If the requested resolution is less than half the requested tile width, check how many images there are in the pyramid first.
+      else if (tileWidthRatio > 2) {
+        
+        if (sortedRatios.length === 3) {
+          return tiffPyramid.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 2])
+        }
+        
+        else if (sortedRatios.length > 3) {
+          if (tileWidthRatio > 4) {
+            return tiffPyramid.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 2])
+          }
+          else {
+            return tiffPyramid.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 3])
+          }
+        }
+  
+      } 
+      else {
+        return 0 // Return first (i.e., largest) image for high magnification tiles
+      }
+    }, 
+
+    convertToImageBlob: async (data, width, height) => {
+      // TODO: Write Node.js module to convert to image
+  
+      let imageData = []
+      data[0].forEach((val, ind) => {
+        imageData.push(val)
+        imageData.push(data[1][ind])
+        imageData.push(data[2][ind])
+        imageData.push(255)
+      })
+  
+      const cv = new OffscreenCanvas(width, height) // Use OffscreenCanvas so it works in workers as well.
+      const ctx = cv.getContext("2d")
+      ctx.putImageData( new ImageData(Uint8ClampedArray.from(imageData), width, height), 0, 0 )
+      const blob = await cv.convertToBlob({
+        type: "image/jpeg",
+        quality: 1.0,
+      })
+  
+      const response = new Response(blob, { status: 200 })
+      return response
     }
   }
 
-  const getImageInfo = async (imageIdentifier) => {
+  const getImageInfo = async (imageID) => {
     let pixelsPerMeter
     
-    await getImagesInPyramid(imageIdentifier, true)
+    await getImagesInPyramid(imageID, true)
     
-    const [width, height] = [tiff[imageIdentifier].image.maxWidth, tiff[imageIdentifier].image.maxHeight]
-    const largestImage = await tiff[imageIdentifier].image.getImage(0)
+    const [width, height] = [tiff[imageID].image.maxWidth, tiff[imageID].image.maxHeight]
+    const largestImage = await tiff[imageID].image.getImage(0)
     const micronsPerPixel = largestImage && largestImage.fileDirectory && largestImage.fileDirectory.ImageDescription && largestImage.fileDirectory.ImageDescription.split("|").find(s => s.includes("MPP")).split("=")[1].trim()
     
     if (micronsPerPixel) {
@@ -145,82 +193,39 @@ var imagebox3 = (() => {
     return response
   }
 
-  const getImagesInPyramid = (imageIdentifier, firstOnly=false) => {
-    return new Promise(async (resolve, reject) => {
-      tiff[imageIdentifier] = tiff[imageIdentifier] || {}
+  const getImagesInPyramid = async (imageID, firstOnly=false) => {
+    tiff[imageID] = tiff[imageID] || {}
 
-      try {
-        tiff[imageIdentifier].image = tiff[imageIdentifier].image || ( await GeoTIFF.fromUrl(imageIdentifier, { cache: false }) )
+    try {
+      tiff[imageID].image = tiff[imageID].image || ( await fromUrl(imageID, { cache: false }) )
 
-        const imageCount = await tiff[imageIdentifier].image.getImageCount()
-        if (tiff[imageIdentifier].image.loadedCount !== imageCount) {
-          tiff[imageIdentifier].image.loadedCount = 0
+      const imageCount = await tiff[imageID].image.getImageCount()
+      if (tiff[imageID].image.loadedCount !== imageCount) {
+        tiff[imageID].image.loadedCount = 0
 
-          const imagePromises = await Promise.allSettled(Array.from(Array(imageCount - 2), (_, ind) => tiff[imageIdentifier].image.getImage(ind) ))
-          tiff[imageIdentifier].image.loadedCount = imagePromises.filter(v => v.status === "fulfilled").length
-          if (imagePromises[0].status === "fulfilled") {
-            const largestImage = imagePromises[0].value
-            const [width, height] = [largestImage.getWidth(), largestImage.getHeight()]
-            tiff[imageIdentifier].image.maxWidth = width
-            tiff[imageIdentifier].image.maxHeight = height
-          } else {
-            tiff[imageIdentifier].image.maxWidth = NaN
-            tiff[imageIdentifier].image.maxHeight = NaN
-          }
-          
-          resolve()
-          return
+        const imagePromises = await Promise.allSettled(Array.from(Array(imageCount - 2), (_, ind) => tiff[imageID].image.getImage(ind) ))
+        tiff[imageID].image.loadedCount = imagePromises.filter(v => v.status === "fulfilled").length
+        if (imagePromises[0].status === "fulfilled") {
+          const largestImage = imagePromises[0].value
+          const [width, height] = [largestImage.getWidth(), largestImage.getHeight()]
+          tiff[imageID].image.maxWidth = width
+          tiff[imageID].image.maxHeight = height
+        } else {
+          tiff[imageID].image.maxWidth = NaN
+          tiff[imageID].image.maxHeight = NaN
         }
-    
-      } catch (e) {
-        console.log("Couldn't get images", e)
-        reject(e)
-      }
-    })
-  }
-
-  const getImageIndexByRatio = async (imageId, tileWidthRatio) => {
-    
-    if (!tiff[imageId].image.imageWidthRatios) {
-      tiff[imageId].image.imageWidthRatios = []
-    
-      for (let imageIndex = 0; imageIndex < tiff[imageId].image.loadedCount; imageIndex++) {
-        const imageWidth = (await tiff[imageId].image.getImage(imageIndex)).getWidth()
-        const maxImageWidth = tiff[imageId].image.maxWidth
-        tiff[imageId].image.imageWidthRatios.push(maxImageWidth / imageWidth)
-      } 
-    
-    }
-    
-    const sortedRatios = [...tiff[imageId].image.imageWidthRatios].sort((a, b) => a - b).slice(0, -1) // Remove thumbnail from consideration
-    
-    if (tileWidthRatio > 8) {
-      return tiff[imageId].image.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 1])
-    }
-    
-    else if (tileWidthRatio <= 2 && tileWidthRatio > 0) {
-      return 0 // Return first image for high magnification tiles
-    }
-    
-    else {
-      
-      if (sortedRatios.length === 3) {
-        return tiff[imageId].image.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 2])
+        
       }
       
-      else if (sortedRatios.length > 3) {
-        if (tileWidthRatio > 4) {
-          return tiff[imageId].image.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 2])
-        }
-        else {
-          return tiff[imageId].image.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 3])
-        }
-      }
-
+    } catch (e) {
+      console.error("Couldn't get images", e)  
     }
+    return
   }
 
-  const getImageThumbnail = async (imageIdentifier, tileParams) => {
+  
+
+  const getImageThumbnail = async (imageID, tileParams) => {
 
     const parsedTileParams = utils.parseTileParams(tileParams)
 
@@ -230,11 +235,11 @@ var imagebox3 = (() => {
       return
     }
 
-    if (!(tiff[imageIdentifier] && tiff[imageIdentifier].image) || tiff[imageIdentifier].image.loadedCount === 0) {
-      await getImagesInPyramid(imageIdentifier, false)
+    if (!(tiff[imageID] && tiff[imageID].image) || tiff[imageID].image.loadedCount === 0) {
+      await getImagesInPyramid(imageID, false)
     }
 
-    const thumbnailImage = await tiff[imageIdentifier].image.getImage(1)
+    const thumbnailImage = await tiff[imageID].image.getImage(1)
     const thumbnailHeightToRender = Math.floor(thumbnailImage.getHeight() * thumbnailWidthToRender / thumbnailImage.getWidth())
 
     let data = await thumbnailImage.readRasters({
@@ -242,12 +247,12 @@ var imagebox3 = (() => {
       height: thumbnailHeightToRender
     })
 
-    const imageResponse = await convertToImage(data, thumbnailWidthToRender, thumbnailHeightToRender)
+    const imageResponse = await utils.convertToImageBlob(data, thumbnailWidthToRender, thumbnailHeightToRender)
     return imageResponse
     
   }
 
-  const getImageTile = async (imageIdentifier, tileParams) => {
+  const getImageTile = async (imageID, tileParams) => {
     const parsedTileParams = utils.parseTileParams(tileParams)
     
     const { tileX, tileY, tileWidth, tileHeight, tileSize } = parsedTileParams
@@ -257,19 +262,19 @@ var imagebox3 = (() => {
       return
     }
 
-    if (!(tiff[imageIdentifier] && tiff[imageIdentifier].image) || tiff[imageIdentifier].image.loadedCount === 0) {
-      await getImagesInPyramid(imageIdentifier, false)
+    if (!(tiff[imageID] && tiff[imageID].image) || tiff[imageID].image.loadedCount === 0) {
+      await getImagesInPyramid(imageID, false)
     }
 
     const tileWidthRatio = Math.floor(tileWidth / tileSize)
-    const optimalImageIndex = await getImageIndexByRatio(imageIdentifier, tileWidthRatio)
+    const optimalImageIndex = await utils.getImageIndexByRatio(tiff[imageID].image, tileWidthRatio)
 
-    const optimalImageInTiff = await tiff[imageIdentifier].image.getImage(optimalImageIndex)
+    const optimalImageInTiff = await tiff[imageID].image.getImage(optimalImageIndex)
     const optimalImageWidth = optimalImageInTiff.getWidth()
     const optimalImageHeight = optimalImageInTiff.getHeight()
     const tileHeightToRender = Math.floor( tileHeight * tileSize / tileWidth)
 
-    const { maxWidth, maxHeight } = tiff[imageIdentifier].image
+    const { maxWidth, maxHeight } = tiff[imageID].image
 
     const tileInImageLeftCoord = Math.floor( tileX * optimalImageWidth / maxWidth )
     const tileInImageTopCoord = Math.floor( tileY * optimalImageHeight / maxHeight )
@@ -287,29 +292,8 @@ var imagebox3 = (() => {
       ]
     })
 
-    const imageResponse = await convertToImage(data, tileSize, tileHeightToRender)
+    const imageResponse = await utils.convertToImageBlob(data, tileSize, tileHeightToRender)
     return imageResponse
-  }
-
-  const convertToImage = async (data, width, height) => {
-    let imageData = []
-    data[0].forEach((val, ind) => {
-      imageData.push(val)
-      imageData.push(data[1][ind])
-      imageData.push(data[2][ind])
-      imageData.push(255)
-    })
-
-    const cv = new OffscreenCanvas(width, height)
-    const ctx = cv.getContext("2d")
-    ctx.putImageData( new ImageData(Uint8ClampedArray.from(imageData), width, height), 0, 0 )
-    const blob = await cv.convertToBlob({
-      type: "image/jpeg",
-      quality: 1.0,
-    })
-
-    const response = new Response(blob, { status: 200 })
-    return response
   }
   
   [ getImageInfo, getImageThumbnail, getImageTile ].forEach(method => {
@@ -317,3 +301,5 @@ var imagebox3 = (() => {
   })
 
 })(imagebox3)
+
+export default imagebox3
