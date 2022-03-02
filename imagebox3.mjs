@@ -1,8 +1,6 @@
-/* Setup the library: determine execution environment,
- * correspondingly import dependencies (GeoTIFF.js)
- */
+// DO NOT USE THIS FILE IN SERVICE WORKERS. USE imageBox3.js INSTEAD.
 
-import { fromUrl } from "https://cdn.skypack.dev/geotiff"
+import { fromUrl } from "https://cdn.skypack.dev/geotiff@1.0.9"
 
 const imagebox3 = (() => {
 
@@ -12,66 +10,60 @@ const imagebox3 = (() => {
   ENVIRONMENT_IS_SERVICE_WORKER = ENVIRONMENT_IS_WEB_WORKER && typeof ServiceWorkerGlobalScope === "function" && self instanceof ServiceWorkerGlobalScope
 
   let utils = {
-    loadTileServerURL: () => {
+    defineTileServerURL: () => {
       // Load tile server base path from search params passed in service worker registration.
-      console.log(self.location)
       const urlSearchParams = new URLSearchParams(self.location.search)
       if (urlSearchParams.has("tileServerURL")) {
         return urlSearchParams.get("tileServerURL")
       } else if (urlSearchParams.has("tileServerPathSuffix")) {
         return `${self.location.origin}/${urlSearchParams.get("tileServerPathSuffix")}`
       }
-    },
-
-    request: (url, opts) => 
-      fetch(url, opts)
-      .then(res => {
-        if (res.ok) {
-          return res
-        } else {
-          throw Error(res.status)
-        }
-      })
+    }
   }
 
-  // let pool = new Pool(Math.floor(navigator.hardwareConcurrency/2))
-
+  
   if (ENVIRONMENT_IS_SERVICE_WORKER) {
+    // Service worker fetch handling.
+    self.oninstall = () => {
+      self.skipWaiting()
+    }
+    
+    self.onactivate = () => {
+      self.clients.claim()
+    }
 
     self.tileServerBasePath = utils.loadTileServerURL()
+
     self.addEventListener("fetch", (e) => {
+      
       if (e.request.url.startsWith(self.tileServerBasePath)) {
+        
         let regex = new RegExp(self.tileServerBasePath + "\/(?<identifier>.[^/]*)\/")
         const { identifier } = regex.exec(e.request.url).groups
-      
+        
         if (e.request.url.endsWith("/info.json")) {
           e.respondWith(imagebox3.getImageInfo(decodeURIComponent(identifier)))
-          return
         }
         
         else if (e.request.url.includes("/full/")) {
           regex = /full\/(?<thumbnailWidthToRender>[0-9]+?),[0-9]*?\/(?<thumbnailRotation>[0-9]+?)\//
           const thumnbnailParams = regex.exec(e.request.url).groups
           e.respondWith(imagebox3.getImageThumbnail(decodeURIComponent(identifier), thumnbnailParams))
-          return
         }
         
         else if (e.request.url.endsWith("/default.jpg")) {
           regex = /\/(?<tileX>[0-9]+?),(?<tileY>[0-9]+?),(?<tileWidth>[0-9]+?),(?<tileHeight>[0-9]+?)\/(?<tileSize>[0-9]+?),[0-9]*?\/(?<tileRotation>[0-9]+?)\//
           const tileParams = regex.exec(e.request.url).groups
           e.respondWith(imagebox3.getImageTile(decodeURIComponent(identifier), tileParams))
-        }
-      
+        }        
       }
+ 
     })
-
   } else if (ENVIRONMENT_IS_WEB_WORKER) {
-    
     self.onmessage = async ({op, data}) => {
       // TODO: Add pooling for workers
+      // let pool = new Pool(Math.floor(navigator.hardwareConcurrency/2))
     }
-    
-    
   } else if (ENVIRONMENT_IS_NODE) {
     // TODO: Add node.js support
   }
@@ -140,7 +132,7 @@ const imagebox3 = (() => {
   
       } 
       else {
-        return 0 // Return first (i.e., largest) image for high magnification tiles
+        return 0 // Return the largest image for high magnification tiles
       }
     }, 
 
@@ -169,13 +161,14 @@ const imagebox3 = (() => {
   }
 
   const getImageInfo = async (imageID) => {
-    let pixelsPerMeter
+    // Get basic information about the image (width, height, MPP)
     
+    let pixelsPerMeter
     await getImagesInPyramid(imageID, true)
     
-    const [width, height] = [tiff[imageID].image.maxWidth, tiff[imageID].image.maxHeight]
-    const largestImage = await tiff[imageID].image.getImage(0)
-    const micronsPerPixel = largestImage && largestImage.fileDirectory && largestImage.fileDirectory.ImageDescription && largestImage.fileDirectory.ImageDescription.split("|").find(s => s.includes("MPP")).split("=")[1].trim()
+    const { maxWidth: width, maxHeight: height} = tiff[imageID].pyramid
+    const largestImage = await tiff[imageID].pyramid.getImage(0)
+    const micronsPerPixel = largestImage?.fileDirectory?.ImageDescription?.split("|").find(s => s.includes("MPP")).split("=")[1].trim()
     
     if (micronsPerPixel) {
       pixelsPerMeter = 1 / (parseFloat(micronsPerPixel) * Math.pow(10, -6))
@@ -193,28 +186,34 @@ const imagebox3 = (() => {
     return response
   }
 
-  const getImagesInPyramid = async (imageID, firstOnly=false) => {
+  const getImagesInPyramid = async (imageID) => {
+    // Get all images in the pyramid.    
+    
     tiff[imageID] = tiff[imageID] || {}
 
     try {
-      tiff[imageID].image = tiff[imageID].image || ( await fromUrl(imageID, { cache: false }) )
+     
+      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await fromUrl(imageID, { cache: false }) )
 
-      const imageCount = await tiff[imageID].image.getImageCount()
-      if (tiff[imageID].image.loadedCount !== imageCount) {
-        tiff[imageID].image.loadedCount = 0
+      const imageCount = await tiff[imageID].pyramid.getImageCount()
+      if (tiff[imageID].pyramid.loadedCount !== imageCount) {
+        tiff[imageID].pyramid.loadedCount = 0
 
-        const imagePromises = await Promise.allSettled(Array.from(Array(imageCount - 2), (_, ind) => tiff[imageID].image.getImage(ind) ))
-        tiff[imageID].image.loadedCount = imagePromises.filter(v => v.status === "fulfilled").length
-        if (imagePromises[0].status === "fulfilled") {
-          const largestImage = imagePromises[0].value
-          const [width, height] = [largestImage.getWidth(), largestImage.getHeight()]
-          tiff[imageID].image.maxWidth = width
-          tiff[imageID].image.maxHeight = height
-        } else {
-          tiff[imageID].image.maxWidth = NaN
-          tiff[imageID].image.maxHeight = NaN
-        }
+        // Discard the last 2 images since they generally contain slide info and are not useful for tiling.
+        const imageRequests = [ ...Array(imageCount - 2) ].map((_, ind) => tiff[imageID].pyramid.getImage(ind)) 
+        const resolvedPromises = await Promise.allSettled(imageRequests)
+        tiff[imageID].pyramid.loadedCount = resolvedPromises.filter(v => v.status === "fulfilled").length
         
+        if (resolvedPromises[0].status === "fulfilled") {
+          // Note the width and height of the largest image in the pyramid for later ratio calculations.
+          const largestImage = resolvedPromises[0].value
+          const [width, height] = [largestImage.getWidth(), largestImage.getHeight()]
+          tiff[imageID].pyramid.maxWidth = width
+          tiff[imageID].pyramid.maxHeight = height
+        } else {
+          tiff[imageID].pyramid.maxWidth = NaN
+          tiff[imageID].pyramid.maxHeight = NaN
+        }
       }
       
     } catch (e) {
@@ -222,8 +221,6 @@ const imagebox3 = (() => {
     }
     return
   }
-
-  
 
   const getImageThumbnail = async (imageID, tileParams) => {
 
@@ -235,11 +232,11 @@ const imagebox3 = (() => {
       return
     }
 
-    if (!(tiff[imageID] && tiff[imageID].image) || tiff[imageID].image.loadedCount === 0) {
+    if (!(tiff[imageID] && tiff[imageID].pyramid) || tiff[imageID].pyramid.loadedCount === 0) {
       await getImagesInPyramid(imageID, false)
     }
 
-    const thumbnailImage = await tiff[imageID].image.getImage(1)
+    const thumbnailImage = await tiff[imageID].pyramid.getImage(1)
     const thumbnailHeightToRender = Math.floor(thumbnailImage.getHeight() * thumbnailWidthToRender / thumbnailImage.getWidth())
 
     let data = await thumbnailImage.readRasters({
@@ -253,6 +250,8 @@ const imagebox3 = (() => {
   }
 
   const getImageTile = async (imageID, tileParams) => {
+    // Get individual tiles from the appropriate image in the pyramid.
+
     const parsedTileParams = utils.parseTileParams(tileParams)
     
     const { tileX, tileY, tileWidth, tileHeight, tileSize } = parsedTileParams
@@ -262,19 +261,19 @@ const imagebox3 = (() => {
       return
     }
 
-    if (!(tiff[imageID] && tiff[imageID].image) || tiff[imageID].image.loadedCount === 0) {
+    if (!(tiff[imageID] && tiff[imageID].pyramid) || tiff[imageID].pyramid.loadedCount === 0) {
       await getImagesInPyramid(imageID, false)
     }
 
     const tileWidthRatio = Math.floor(tileWidth / tileSize)
-    const optimalImageIndex = await utils.getImageIndexByRatio(tiff[imageID].image, tileWidthRatio)
+    const optimalImageIndex = await utils.getImageIndexByRatio(tiff[imageID].pyramid, tileWidthRatio)
 
-    const optimalImageInTiff = await tiff[imageID].image.getImage(optimalImageIndex)
+    const optimalImageInTiff = await tiff[imageID].pyramid.getImage(optimalImageIndex)
     const optimalImageWidth = optimalImageInTiff.getWidth()
     const optimalImageHeight = optimalImageInTiff.getHeight()
     const tileHeightToRender = Math.floor( tileHeight * tileSize / tileWidth)
 
-    const { maxWidth, maxHeight } = tiff[imageID].image
+    const { maxWidth, maxHeight } = tiff[imageID].pyramid
 
     const tileInImageLeftCoord = Math.floor( tileX * optimalImageWidth / maxWidth )
     const tileInImageTopCoord = Math.floor( tileY * optimalImageHeight / maxHeight )

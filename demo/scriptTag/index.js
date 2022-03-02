@@ -101,7 +101,7 @@ imgBox.loadImage = async (url="https://storage.googleapis.com/imagebox_test/open
 }
 
 imgBox.changeImage = () => {
-  const fileURL = document.getElementById("imageURL").value
+  const fileURL = document.getElementById("imageURLInput").value
   imgBox.modifyHashString({fileURL}, false)
 }
 
