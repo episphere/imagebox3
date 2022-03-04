@@ -12,7 +12,7 @@ var imagebox3 = (() => {
 
   const GEOTIFF_LIB_URL = {
     "mjs": "https://cdn.skypack.dev/geotiff@1.0.9", // for the ES6 module (since service workers don't support dynamic imports yet)
-    "js": "https://cdn.jsdelivr.net/npm/geotiff@1.0.9/dist-browser/geotiff.js" // for service worker
+    "js": "https://cdn.jsdelivr.net/npm/geotiff@1.0.4/dist-browser/geotiff.js" // for service worker
   }
   if (ENVIRONMENT_IS_WEB_WORKER || ENVIRONMENT_IS_SERVICE_WORKER) {
     importScripts(GEOTIFF_LIB_URL["js"])
