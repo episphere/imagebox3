@@ -90,12 +90,15 @@ const imagebox3 = (() => {
       return parsedTileParams
     },
     
-    getImageIndexByRatio: async (tiffPyramid, tileWidthRatio) => {
+    getImageByRatio: async (tiffPyramid, tileWidth, tileWidthToRender) => {
       // Return the index of the appropriate image in the pyramid for the requested tile
       // by comparing the ratio of the width of the requested tile and the requested resolution, 
       // and comparing it against the ratios of the widths of all images in the pyramid to the largest image.
       // This is a heuristic that is used to determine the best image to use for a given tile request.
-      // Could be optimized further.
+      // Could be optimized further?
+
+      const tileWidthRatio = Math.floor(tileWidth / tileWidthToRender)
+      let bestImageIndex = 0
 
       if (!tiffPyramid.imageWidthRatios) {
         tiffPyramid.imageWidthRatios = []
@@ -109,32 +112,33 @@ const imagebox3 = (() => {
       }
       
       const sortedRatios = [...tiffPyramid.imageWidthRatios].sort((a, b) => a - b).slice(0, -1) // Remove thumbnail from consideration
-      
+
       // If the requested resolution is less than 1/8th the requested tile width, the smallest image should suffice.
-      if (tileWidthRatio > 8) {
-        return tiffPyramid.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 1])
+      if (tileWidthRatio >= sortedRatios[sortedRatios.length - 1]) {
+        bestImageIndex = tiffPyramid.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 1])
+       
       }
-      // If the requested resolution is less than half the requested tile width, check how many images there are in the pyramid first.
-      else if (tileWidthRatio > 2) {
-        
-        if (sortedRatios.length === 3) {
-          return tiffPyramid.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 2])
-        }
-        
-        else if (sortedRatios.length > 3) {
-          if (tileWidthRatio > 4) {
-            return tiffPyramid.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 2])
-          }
-          else {
-            return tiffPyramid.imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 3])
-          }
-        }
-  
-      } 
+      else if (tileWidthRatio <= sortedRatios[1]) {
+        // Return the largest image for high magnification tiles
+        bestImageIndex = tiffPyramid.imageWidthRatios.indexOf(sortedRatios[0])
+      }
+      
+      // If the requested resolution is between the highest and lowest resolution images in the pyramid, 
+      // return the smallest image with resolution ratio greater than the requested resolution.
       else {
-        return 0 // Return the largest image for high magnification tiles
+        const otherRatios = sortedRatios.slice(1, sortedRatios.length - 1)
+        if (otherRatios.length === 1) {
+          bestImageIndex = tiffPyramid.imageWidthRatios.indexOf(otherRatios[0])
+        } else {
+          otherRatios.forEach((ratio, index) => {
+            if (tileWidthRatio >= ratio && tileWidthRatio <= sortedRatios[index + 2]) {
+              bestImageIndex = tiffPyramid.imageWidthRatios.indexOf(otherRatios[index])
+            }
+          })
+        }
       }
-    }, 
+      return await tiffPyramid.getImage(bestImageIndex)
+    },  
 
     convertToImageBlob: async (data, width, height) => {
       // TODO: Write Node.js module to convert to image
@@ -265,10 +269,8 @@ const imagebox3 = (() => {
       await getImagesInPyramid(imageID, false)
     }
 
-    const tileWidthRatio = Math.floor(tileWidth / tileSize)
-    const optimalImageIndex = await utils.getImageIndexByRatio(tiff[imageID].pyramid, tileWidthRatio)
+    const optimalImageInTiff = await utils.getImageByRatio(tiff[imageID].pyramid, tileWidth, tileSize)
 
-    const optimalImageInTiff = await tiff[imageID].pyramid.getImage(optimalImageIndex)
     const optimalImageWidth = optimalImageInTiff.getWidth()
     const optimalImageHeight = optimalImageInTiff.getHeight()
     const tileHeightToRender = Math.floor( tileHeight * tileSize / tileWidth)
