@@ -149,7 +149,6 @@ var imagebox3 = (() => {
           })
         }
       }
-      console.log(bestImageIndex, tileWidthRatio, sortedRatios)
       return await tiffPyramid.getImage(bestImageIndex)
     }, 
 
