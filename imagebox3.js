@@ -21,6 +21,10 @@ var imagebox3 = (() => {
     import(GEOTIFF_LIB_URL["mjs"]).then(lib => {
       GeoTIFF = lib.GeoTIFF
     })
+  } else if (ENVIRONMENT_IS_NODE) {
+    import('geotiff').then(lib => {
+      GeoTIFF = lib.GeoTIFF
+    })
   }
 
   let utils = {

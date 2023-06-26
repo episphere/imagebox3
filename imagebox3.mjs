@@ -81,7 +81,7 @@ const imagebox3 = (() => {
     parseTileParams: (tileParams) => {
       // Parse tile params into tile coordinates and size
       const parsedTileParams = Object.entries(tileParams).reduce((parsed, [key, val]) => {
-        if (val) {
+        if (!isNaN(val)) {
           parsed[key] = parseInt(val)
         }
         return parsed

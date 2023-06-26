@@ -41,6 +41,7 @@ imgBox.modifyHashString = (hashObj, removeFromHistory=false) => {
   let hash = decodeURIComponent(window.location.hash)
   
   Object.entries(hashObj).forEach(([key, val]) => {
+    val = encodeURIComponent(val)
     if (val && val !== hashParams[key]) {
      
       if (hashParams[key]) {
@@ -79,20 +80,25 @@ imgBox.modifyHashString = (hashObj, removeFromHistory=false) => {
 }
 
 imgBox.loadTile = async () => {
+  const tileElement = document.getElementById("tile")
+
   const fileURL = document.getElementById("imageURLInput").value
   const tileX = document.getElementById("topX").value
   const tileY = document.getElementById("topY").value
   const tileWidth = document.getElementById("tileW").value
   const tileHeight = document.getElementById("tileH").value
   const tileSize = document.getElementById("imageW").value
-  document.getElementById("tile").src = URL.createObjectURL(await (await imagebox3.getImageTile(decodeURIComponent(fileURL), {
+  
+  tileElement.src = URL.createObjectURL(await (await imagebox3.getImageTile(decodeURIComponent(fileURL), {
     tileX,
     tileY,
     tileWidth,
     tileHeight,
     tileSize
   })).blob())
-
+  tileElement.onload = () => {
+    URL.revokeObjectURL(tileElement.src)
+  }
 }
 
 imgBox.loadImage = async (url="https://storage.googleapis.com/imagebox_test/openslide-testdata/Aperio/CMU-1.svs") => {
