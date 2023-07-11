@@ -21,16 +21,8 @@ const loadHashParams = async () => {
   
   }
   
-  if (hashParams["fileURL"] && previousHashParams?.fileURL !== hashParams["fileURL"]) {
-    if (!previousHashParams["fileURL"]) {
-      setTimeout(() => imgBox.loadImage(hashParams["fileURL"]), 2000)
-    } else {
-      imgBox.loadImage(hashParams["fileURL"])
-    }
-  }
-
-  if (hashParams.wsiCenterX && hashParams.wsiCenterY && hashParams.wsiZoom) {
-    imgBox.handlePanAndZoom(hashParams.wsiCenterX, hashParams.wsiCenterY, hashParams.wsiZoom)
+  if (hashParams["fileURL"]) {
+    imgBox.loadTile(hashParams)
   }
 
   window.localStorage.hashParams = JSON.stringify(hashParams)
@@ -79,15 +71,33 @@ imgBox.modifyHashString = (hashObj, removeFromHistory=false) => {
   }
 }
 
-imgBox.loadTile = async () => {
+imgBox.loadTile = async ({fileURL, tileX, tileY, tileWidth, tileHeight, tileSize}) => {
   const tileElement = document.getElementById("tile")
 
-  const fileURL = document.getElementById("imageURLInput").value
-  const tileX = document.getElementById("topX").value
-  const tileY = document.getElementById("topY").value
-  const tileWidth = document.getElementById("tileW").value
-  const tileHeight = document.getElementById("tileH").value
-  const tileSize = document.getElementById("imageW").value
+  const fileURLElement = document.getElementById("imageURLInput")
+  if (fileURLElement.value !== fileURL) {
+    fileURLElement.value = fileURL
+  }
+  const tileXElement = document.getElementById("topX")
+  if (tileXElement.value !== tileX) {
+    tileXElement.value = tileX
+  }
+  const tileYElement = document.getElementById("topY")
+  if (tileYElement.value !== tileY) {
+    tileYElement.value = tileY
+  }
+  const tileWidthElement = document.getElementById("tileW")
+  if (tileWidthElement.value !== tileWidth) {
+    tileWidthElement.value = tileWidth
+  }
+  const tileHeightElement = document.getElementById("tileH")
+  if (tileHeightElement.value !== tileHeight) {
+    tileHeightElement.value = tileHeight
+  }
+  const tileSizeElement = document.getElementById("imageW")
+  if (tileSizeElement.value !== tileSize) {
+    tileSizeElement.value = tileSize
+  }
   
   tileElement.src = URL.createObjectURL(await (await imagebox3.getImageTile(decodeURIComponent(fileURL), {
     tileX,
@@ -101,23 +111,76 @@ imgBox.loadTile = async () => {
   }
 }
 
-imgBox.loadImage = async (url="https://storage.googleapis.com/imagebox_test/openslide-testdata/Aperio/CMU-1.svs") => {
-  document.getElementById("imageURLInput").value = url
-  imgBox.loadTile()
+imgBox.loadImageWithDefaultVals = async (url="https://storage.googleapis.com/imagebox_test/openslide-testdata/Aperio/CMU-1.svs") => {
+  const fileURL = document.getElementById("imageURLInput")
+  fileURL.value=url
+  const tileX = document.getElementById("topX")
+  tileX.value="31232"
+  const tileY = document.getElementById("topY")
+  tileY.value="14336"
+  const tileWidth = document.getElementById("tileW")
+  tileWidth.value="1024"
+  const tileHeight = document.getElementById("tileH")
+  tileHeight.value="1024"
+  const tileSize = document.getElementById("imageW")
+  tileSize.value="256"
+  imgBox.modifyHashString({
+    'fileURL': fileURL.value,
+    'tileX': tileX.value,
+    'tileY': tileY.value,
+    'tileWidth': tileWidth.value,
+    'tileHeight': tileHeight.value,
+    'tileSize': tileSize.value,
+  })
 }
 
-imgBox.changeImage = () => {
-  const fileURL = document.getElementById("imageURLInput").value
-  imgBox.modifyHashString({fileURL}, false)
-}
 
+imgBox.setupEventListeners = () => {
+  const fileURL = document.getElementById("imageURLInput")
+  fileURL.onchange = (e)=> {
+    imgBox.modifyHashString({
+      'fileURL': e.target.value
+    })
+  }
+  const tileX = document.getElementById("topX")
+  tileX.onchange = (e)=> {
+    imgBox.modifyHashString({
+      'tileX': e.target.value
+    })
+  }
+  const tileY = document.getElementById("topY")
+  tileY.onchange = (e)=> {
+    imgBox.modifyHashString({
+      'tileY': e.target.value
+    })
+  }
+  const tileWidth = document.getElementById("tileW")
+  tileWidth.onchange = (e)=> {
+    imgBox.modifyHashString({
+      'tileWidth': e.target.value
+    })
+  }
+  const tileHeight = document.getElementById("tileH")
+  tileHeight.onchange = (e)=> {
+    imgBox.modifyHashString({
+      'tileHeight': e.target.value
+    })
+  }
+  const tileSize = document.getElementById("imageW")
+  tileSize.onchange = (e)=> {
+    imgBox.modifyHashString({
+      'tileSize': e.target.value
+    })
+  }
+}
 
 window.onload = async () => {
 
   loadHashParams()
-  
+  imgBox.setupEventListeners()
+
   if (!hashParams["fileURL"]) {
-    imgBox.loadImage()
+    imgBox.loadImageWithDefaultVals()
   }
 
 }

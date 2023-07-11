@@ -25,9 +25,10 @@ imgBox.default = {
 
 imgBox.handlers = {
   viewer: {
-    animationFinish: (viewer) => {
+    animationFinish: ({eventSource: viewer}) => {
+      console.log("HERE")
       const center = viewer.viewport.getCenter()
-      const zoom = roundToPrecision(viewer.viewport.getZoom(), 3)
+      const zoom = utils.roundToPrecision(viewer.viewport.getZoom(), 3)
   
       if (center.x !== parseFloat(hashParams.wsiCenterX) || center.y !== parseFloat(hashParams.wsiCenterY) || zoom !== parseFloat(hashParams.wsiZoom)) {
         imgBox.modifyHashString({
@@ -226,9 +227,10 @@ imgBox.loadImage = async (url=document.getElementById("imageURLInput").value) =>
   
   if (!imgBox.viewer) {
     imgBox.viewer = OpenSeadragon(imgBox.default.osdViewerOptions)
-    imgBox.viewer.addHandler('animation-finish', imgBox.handlers.animationFinish)
+    imgBox.viewer.addHandler('animation-finish', imgBox.handlers.viewer.animationFinish)
   }
   else {
+    sherlockWSI.viewer.close()
     imgBox.removePanAndZoomFromHash()
   }
 
