@@ -230,7 +230,7 @@ imgBox.loadImage = async (url=document.getElementById("imageURLInput").value) =>
     imgBox.viewer.addHandler('animation-finish', imgBox.handlers.viewer.animationFinish)
   }
   else {
-    sherlockWSI.viewer.close()
+    imgBox.viewer.close()
     imgBox.removePanAndZoomFromHash()
   }
 
