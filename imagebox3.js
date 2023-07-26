@@ -10,20 +10,25 @@ var imagebox3 = (() => {
   ENVIRONMENT_IS_WEB_WORKER = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && typeof WorkerGlobalScope === "function" && self instanceof WorkerGlobalScope,
   ENVIRONMENT_IS_SERVICE_WORKER = ENVIRONMENT_IS_WEB_WORKER && typeof ServiceWorkerGlobalScope === "function" && self instanceof ServiceWorkerGlobalScope
 
-  let workerPool = undefined
-
   const GEOTIFF_LIB_URL = {
-    "mjs": "https://cdn.skypack.dev/geotiff@1.0.9", // for the ES6 module (since service workers don't support dynamic imports yet)
-    "js": "https://cdn.jsdelivr.net/npm/geotiff@1.0.4/dist-browser/geotiff.js" // for service worker
+    "mjs": "https://cdn.jsdelivr.net/npm/geotiff@2.0.7/+esm", // for ES6 module fetching (since service workers don't support dynamic imports yet)
+    "js": "https://cdn.jsdelivr.net/npm/geotiff@2.0.7", // for web workers
+    "jsSW": "https://cdn.jsdelivr.net/npm/geotiff@1.0.4/dist-browser/geotiff.js" // for service workers. 1.0.4 is the last GeoTIFF version that service workers can import.
   }
-  if (ENVIRONMENT_IS_WEB_WORKER || ENVIRONMENT_IS_SERVICE_WORKER) {
+  if (ENVIRONMENT_IS_SERVICE_WORKER) {
+    importScripts(GEOTIFF_LIB_URL["jsSW"])
+    GeoTIFF = self.GeoTIFF
+  } 
+  else if (ENVIRONMENT_IS_WEB_WORKER) {
     importScripts(GEOTIFF_LIB_URL["js"])
     GeoTIFF = self.GeoTIFF
-  } else if (ENVIRONMENT_IS_WEB) {
+  } 
+  else if (ENVIRONMENT_IS_WEB) {
     import(GEOTIFF_LIB_URL["mjs"]).then(lib => {
       GeoTIFF = lib.GeoTIFF
     })
-  } else if (ENVIRONMENT_IS_NODE) {
+  }
+  else if (ENVIRONMENT_IS_NODE) {
     import('geotiff').then(lib => {
       GeoTIFF = lib.GeoTIFF
     })
@@ -79,18 +84,17 @@ var imagebox3 = (() => {
  
     })
   } else if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WEB_WORKER) {
-      workerPool = new GeoTIFF.Pool(Math.floor(navigator.hardwareConcurrency/2))
+      // workerPool = new GeoTIFF.Pool(Math.floor(navigator.hardwareConcurrency/2))
   } else if (ENVIRONMENT_IS_NODE) {
     // TODO: Add node.js support
   }
 
-  return {
-    pool: workerPool
-  }
+  return {}
 
 })();
 
 (function ($){
+  $.workerPool = undefined
 
   let tiff = {} // Variable to cache GeoTIFF instance per image for reuse.
   const imageInfoContext = "http://iiif.io/api/image/2/context.json"
@@ -99,7 +103,7 @@ var imagebox3 = (() => {
     parseTileParams: (tileParams) => {
       // Parse tile params into tile coordinates and size
       const parsedTileParams = Object.entries(tileParams).reduce((parsed, [key, val]) => {
-        if (val) {
+        if (!isNaN(val)) {
           parsed[key] = parseInt(val)
         }
         return parsed
@@ -215,7 +219,7 @@ var imagebox3 = (() => {
 
     try {
      
-      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await GeoTIFF.fromUrl(imageID, { headers: {'Cache-Control': "no-store"}}) )
+      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await GeoTIFF.fromUrl(imageID, { headers: {'Cache-Control': "no-cache, no-store"}}) )
 
       const imageCount = await tiff[imageID].pyramid.getImageCount()
       if (tiff[imageID].pyramid.loadedCount !== imageCount) {
@@ -244,7 +248,10 @@ var imagebox3 = (() => {
     return
   }
 
-  const getImageThumbnail = async (imageID, tileParams) => {
+  const getImageThumbnail = async (imageID, tileParams, pool=false) => {
+    if (pool) {
+      createPool()
+    }
 
     const parsedTileParams = utils.parseTileParams(tileParams)
 
@@ -264,7 +271,7 @@ var imagebox3 = (() => {
     let data = await thumbnailImage.readRasters({
       width: thumbnailWidthToRender,
       height: thumbnailHeightToRender,
-      pool: $.pool
+      pool: $.workerPool
     })
 
     const imageResponse = await utils.convertToImageBlob(data, thumbnailWidthToRender, thumbnailHeightToRender)
@@ -272,8 +279,11 @@ var imagebox3 = (() => {
     
   }
 
-  const getImageTile = async (imageID, tileParams) => {
+  const getImageTile = async (imageID, tileParams, pool=false) => {
     // Get individual tiles from the appropriate image in the pyramid.
+    if (pool) {
+      createPool()
+    }
 
     const parsedTileParams = utils.parseTileParams(tileParams)
     
@@ -295,10 +305,10 @@ var imagebox3 = (() => {
 
     const { maxWidth, maxHeight } = tiff[imageID].pyramid
 
-    const tileInImageLeftCoord = Math.floor(tileX * optimalImageWidth / maxWidth)
-    const tileInImageTopCoord = Math.floor(tileY * optimalImageHeight / maxHeight)
-    const tileInImageRightCoord = Math.floor((tileX + tileWidth) * optimalImageWidth / maxWidth)
-    const tileInImageBottomCoord = Math.floor((tileY + tileHeight) * optimalImageHeight / maxHeight)
+    const tileInImageLeftCoord = Math.max(Math.floor(tileX * optimalImageWidth / maxWidth), 0)
+    const tileInImageTopCoord = Math.max(Math.floor(tileY * optimalImageHeight / maxHeight), 0)
+    const tileInImageRightCoord = Math.min(Math.floor((tileX + tileWidth) * optimalImageWidth / maxWidth), optimalImageWidth)
+    const tileInImageBottomCoord = Math.min(Math.floor((tileY + tileHeight) * optimalImageHeight / maxHeight), optimalImageHeight)
 
     const data = await optimalImageInTiff.readRasters({
       width: tileSize,
@@ -309,14 +319,24 @@ var imagebox3 = (() => {
         tileInImageRightCoord,
         tileInImageBottomCoord,
       ],
-      pool: $.pool
+      pool: $.workerPool
     })
 
     const imageResponse = await utils.convertToImageBlob(data, tileSize, tileHeightToRender)
     return imageResponse
   }
   
-  [getImageInfo, getImageThumbnail, getImageTile].forEach(method => {
+  const createPool = async () => {
+    if (!$.workerPool) {
+      $.workerPool = new GeoTIFF.Pool(Math.floor(navigator.hardwareConcurrency/2))
+    }
+  }
+
+  const destroyPool = async () => {
+    $.workerPool?.destroy()
+  }
+  
+  [getImageInfo, getImageThumbnail, getImageTile, createPool, destroyPool].forEach(method => {
     $[method.name] = method
   })
 

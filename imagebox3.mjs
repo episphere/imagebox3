@@ -1,6 +1,6 @@
 // DO NOT USE THIS FILE IN SERVICE WORKERS. USE imageBox3.js INSTEAD.
 
-import { fromUrl, Pool } from "https://cdn.skypack.dev/geotiff@1.0.9"
+import { fromUrl, Pool } from "https://cdn.jsdelivr.net/npm/geotiff@2.0.7/+esm"
 
 const imagebox3 = (() => {
 
@@ -198,7 +198,7 @@ const imagebox3 = (() => {
 
     try {
      
-      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await fromUrl(imageID, { headers: {'Cache-Control': "no-store"}}) )
+      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await fromUrl(imageID, { headers: {'Cache-Control': "no-cache, no-store"}}) )
 
       const imageCount = await tiff[imageID].pyramid.getImageCount()
       if (tiff[imageID].pyramid.loadedCount !== imageCount) {
@@ -227,7 +227,10 @@ const imagebox3 = (() => {
     return
   }
 
-  const getImageThumbnail = async (imageID, tileParams) => {
+  const getImageThumbnail = async (imageID, tileParams, pool=false) => {
+    if (pool) {
+      createPool()
+    }
 
     const parsedTileParams = utils.parseTileParams(tileParams)
 
@@ -255,8 +258,11 @@ const imagebox3 = (() => {
     
   }
 
-  const getImageTile = async (imageID, tileParams) => {
+  const getImageTile = async (imageID, tileParams, pool=false) => {
     // Get individual tiles from the appropriate image in the pyramid.
+    if (pool) {
+      createPool()
+    }
 
     const parsedTileParams = utils.parseTileParams(tileParams)
     
@@ -279,10 +285,10 @@ const imagebox3 = (() => {
 
     const { maxWidth, maxHeight } = tiff[imageID].pyramid
 
-    const tileInImageLeftCoord = Math.floor( tileX * optimalImageWidth / maxWidth )
-    const tileInImageTopCoord = Math.floor( tileY * optimalImageHeight / maxHeight )
-    const tileInImageRightCoord = Math.floor( (tileX + tileWidth) * optimalImageWidth / maxWidth )
-    const tileInImageBottomCoord = Math.floor( (tileY + tileHeight) * optimalImageHeight / maxHeight )
+    const tileInImageLeftCoord = Math.max(Math.floor(tileX * optimalImageWidth / maxWidth), 0)
+    const tileInImageTopCoord = Math.max(Math.floor(tileY * optimalImageHeight / maxHeight), 0)
+    const tileInImageRightCoord = Math.min(Math.floor((tileX + tileWidth) * optimalImageWidth / maxWidth), optimalImageWidth)
+    const tileInImageBottomCoord = Math.min(Math.floor((tileY + tileHeight) * optimalImageHeight / maxHeight), optimalImageHeight)
 
     const data = await optimalImageInTiff.readRasters({
       width: tileSize,
@@ -300,7 +306,17 @@ const imagebox3 = (() => {
     return imageResponse
   }
   
-  [ getImageInfo, getImageThumbnail, getImageTile ].forEach(method => {
+  const createPool = async () => {
+    if (!$.workerPool) {
+      $.workerPool = new GeoTIFF.Pool(Math.floor(navigator.hardwareConcurrency/2))
+    }
+  }
+
+  const destroyPool = async () => {
+    $.workerPool?.destroy()
+  }
+  
+  [getImageInfo, getImageThumbnail, getImageTile, createPool, destroyPool].forEach(method => {
     $[method.name] = method
   })
 
