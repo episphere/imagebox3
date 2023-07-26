@@ -26,7 +26,6 @@ imgBox.default = {
 imgBox.handlers = {
   viewer: {
     animationFinish: ({eventSource: viewer}) => {
-      console.log("HERE")
       const center = viewer.viewport.getCenter()
       const zoom = utils.roundToPrecision(viewer.viewport.getZoom(), 3)
   
@@ -90,9 +89,10 @@ const loadHashParams = async () => {
 
 imgBox.modifyHashString = (hashObj, removeFromHistory=true) => {
   // hashObj contains hash keys with corresponding values to update..
-  let hash = decodeURIComponent(window.location.hash)
+  let hash = window.location.hash + ""
   
   Object.entries(hashObj).forEach(([key, val]) => {
+    val = encodeURIComponent(val)
     if (val && val !== hashParams[key]) {
      
       if (hashParams[key]) {
@@ -266,7 +266,16 @@ imgBox.removePanAndZoomFromHash = () => {
 imgBox.loadDefaultImage = async () => {
   const defaultWSIURL = "https://storage.googleapis.com/imagebox_test/openslide-testdata/Aperio/CMU-1.svs"
   document.getElementById("imageURLInput").value = defaultWSIURL
-  imgBox.loadImage(defaultWSIURL)
+  imgBox.modifyHashString({
+    'fileURL': defaultWSIURL
+  })
+}
+
+imgBox.changeImage = () => {
+  const fileURL = document.getElementById("imageURLInput").value
+  imgBox.modifyHashString({
+    'fileURL': fileURL
+  })
 }
 
 imgBox.addServiceWorker = async () => {
@@ -282,11 +291,15 @@ imgBox.addServiceWorker = async () => {
 
 window.onload = async () => {
   await imgBox.addServiceWorker()
-  loadHashParams()
+  setTimeout(() => {
+    // Give service worker some time to set up. Just a hack.
+    // TODO: read up on service workers later and fix.
+    loadHashParams()
 
-  if (!hashParams["fileURL"]) {
-    setTimeout(() => imgBox.loadDefaultImage(), 1000)
-  }
+    if (!hashParams["fileURL"]) {
+      setTimeout(() => imgBox.loadDefaultImage(), 1000)
+    }
+  }, 1000)
 }
 
 window.onhashchange = loadHashParams

@@ -30,7 +30,7 @@ const loadHashParams = async () => {
 
 imgBox.modifyHashString = (hashObj, removeFromHistory=false) => {
   // hashObj contains hash keys with corresponding values to update..
-  let hash = decodeURIComponent(window.location.hash)
+  let hash = window.location.hash + ""
   
   Object.entries(hashObj).forEach(([key, val]) => {
     val = encodeURIComponent(val)
@@ -137,9 +137,15 @@ imgBox.loadImageWithDefaultVals = async (url="https://storage.googleapis.com/ima
 
 imgBox.setupEventListeners = () => {
   const fileURL = document.getElementById("imageURLInput")
+  const submitButton = document.getElementById("imageURLSubmit")
   fileURL.onchange = (e)=> {
     imgBox.modifyHashString({
       'fileURL': e.target.value
+    })
+  }
+  submitButton.onclick = (e)=> {
+    imgBox.modifyHashString({
+      'fileURL': document.getElementById("imageURLInput").value
     })
   }
   const tileX = document.getElementById("topX")
