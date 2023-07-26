@@ -9,6 +9,8 @@ const imagebox3 = (() => {
   ENVIRONMENT_IS_WEB_WORKER = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && typeof WorkerGlobalScope === "function" && self instanceof WorkerGlobalScope,
   ENVIRONMENT_IS_SERVICE_WORKER = ENVIRONMENT_IS_WEB_WORKER && typeof ServiceWorkerGlobalScope === "function" && self instanceof ServiceWorkerGlobalScope
 
+  let workerPool = undefined
+
   let utils = {
     defineTileServerURL: () => {
       // Load tile server base path from search params passed in service worker registration.
@@ -62,13 +64,15 @@ const imagebox3 = (() => {
   } else if (ENVIRONMENT_IS_WEB_WORKER) {
     self.onmessage = async ({op, data}) => {
       // TODO: Add pooling for workers
-      // let pool = new Pool(Math.floor(navigator.hardwareConcurrency/2))
+      workerPool = new Pool(Math.floor(navigator.hardwareConcurrency/2))
     }
   } else if (ENVIRONMENT_IS_NODE) {
     // TODO: Add node.js support
   }
 
-  return {}
+  return {
+    pool: workerPool
+  }
 
 })();
 
@@ -197,7 +201,7 @@ const imagebox3 = (() => {
 
     try {
      
-      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await fromUrl(imageID, { cache: false }) )
+      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await fromUrl(imageID, { headers: {'Cache-Control': "no-store"}}) )
 
       const imageCount = await tiff[imageID].pyramid.getImageCount()
       if (tiff[imageID].pyramid.loadedCount !== imageCount) {
@@ -245,7 +249,8 @@ const imagebox3 = (() => {
 
     let data = await thumbnailImage.readRasters({
       width: thumbnailWidthToRender,
-      height: thumbnailHeightToRender
+      height: thumbnailHeightToRender,
+      pool: $.pool
     })
 
     const imageResponse = await utils.convertToImageBlob(data, thumbnailWidthToRender, thumbnailHeightToRender)
@@ -290,7 +295,8 @@ const imagebox3 = (() => {
         tileInImageTopCoord,
         tileInImageRightCoord,
         tileInImageBottomCoord,
-      ]
+      ],
+      pool: $.pool
     })
 
     const imageResponse = await utils.convertToImageBlob(data, tileSize, tileHeightToRender)
