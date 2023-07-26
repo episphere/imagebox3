@@ -1,6 +1,6 @@
 // DO NOT USE THIS FILE IN SERVICE WORKERS. USE imageBox3.js INSTEAD.
 
-import { fromUrl } from "https://cdn.skypack.dev/geotiff@1.0.9"
+import { fromUrl, Pool } from "https://cdn.skypack.dev/geotiff@1.0.9"
 
 const imagebox3 = (() => {
 

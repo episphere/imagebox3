@@ -79,7 +79,7 @@ var imagebox3 = (() => {
  
     })
   } else if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WEB_WORKER) {
-      workerPool = new Pool(Math.floor(navigator.hardwareConcurrency/2))
+      workerPool = new GeoTIFF.Pool(Math.floor(navigator.hardwareConcurrency/2))
   } else if (ENVIRONMENT_IS_NODE) {
     // TODO: Add node.js support
   }
