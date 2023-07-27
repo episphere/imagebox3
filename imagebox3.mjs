@@ -229,7 +229,7 @@ const imagebox3 = (() => {
 
   const getImageThumbnail = async (imageID, tileParams, pool=false) => {
     if (pool) {
-      createPool()
+      await createPool()
     }
 
     const parsedTileParams = utils.parseTileParams(tileParams)
@@ -261,7 +261,7 @@ const imagebox3 = (() => {
   const getImageTile = async (imageID, tileParams, pool=false) => {
     // Get individual tiles from the appropriate image in the pyramid.
     if (pool) {
-      createPool()
+      await createPool()
     }
 
     const parsedTileParams = utils.parseTileParams(tileParams)
@@ -309,6 +309,7 @@ const imagebox3 = (() => {
   const createPool = async () => {
     if (!$.workerPool) {
       $.workerPool = new GeoTIFF.Pool(Math.floor(navigator.hardwareConcurrency/2))
+      await new Promise(res => setTimeout(res, 500)) // Setting up the worker pool is an asynchronous task, give it time to complete before moving on.
     }
   }
 
