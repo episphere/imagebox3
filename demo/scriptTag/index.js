@@ -7,7 +7,7 @@ localStorage.hashParams = ""
 
 const loadHashParams = async () => {
   // Load hash parameters from the URL.
-  const previousHashParams = window.localStorage.hashParams ? JSON.parse(window.localStorage.hashParams) : {}
+  // const previousHashParams = window.localStorage.hashParams ? JSON.parse(window.localStorage.hashParams) : {}
   hashParams = {}
 
   if (window.location.hash.includes("=")) {
@@ -33,11 +33,10 @@ imgBox.modifyHashString = (hashObj, removeFromHistory=false) => {
   let hash = window.location.hash + ""
   
   Object.entries(hashObj).forEach(([key, val]) => {
-    val = encodeURIComponent(val)
     if (val && val !== hashParams[key]) {
      
       if (hashParams[key]) {
-        hash = hash.replace(`${key}=${hashParams[key]}`, `${key}=${val}`)
+        hash = hash.replace(`${key}=${encodeURIComponent(hashParams[key])}`, `${key}=${encodeURIComponent(val)}`)
       } 
       else {
         hash += hash.length > 0 ? "&" : ""
@@ -47,7 +46,7 @@ imgBox.modifyHashString = (hashObj, removeFromHistory=false) => {
     } 
     
     else if (!val) {
-      const param = `${key}=${hashParams[key]}`
+      const param = `${key}=${encodeURIComponent(hashParams[key])}`
       const paramIndex = hash.indexOf(param)
       
       if (hash[paramIndex-1] === "&") {  // if hash is of the form "...&q=123...", remove preceding & as well.
