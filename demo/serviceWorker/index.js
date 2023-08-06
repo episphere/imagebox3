@@ -99,7 +99,7 @@ imgBox.modifyHashString = (hashObj, removeFromHistory=true) => {
       } 
       else {
         hash += hash.length > 0 ? "&" : ""
-        hash += `${key}=${val}`
+        hash += `${key}=${encodeURIComponent(val)}`
       }
   
     } 
