@@ -1,4 +1,4 @@
-// DO NOT USE THIS FILE IN SERVICE WORKERS. USE imageBox3.js INSTEAD.
+// DO NOT USE THIS FILE IN SERVICE WORKERS. USE imagebox3.js INSTEAD.
 
 import { fromUrl, Pool } from "https://cdn.jsdelivr.net/npm/geotiff@2.0.7/+esm"
 
@@ -168,12 +168,15 @@ const imagebox3 = (() => {
   const getImageInfo = async (imageID) => {
     // Get basic information about the image (width, height, MPP)
     
-    let pixelsPerMeter
+    let pixelsPerMeter = undefined
     await getImagesInPyramid(imageID, true)
     
     const { maxWidth: width, maxHeight: height} = tiff[imageID].pyramid
     const largestImage = await tiff[imageID].pyramid.getImage(0)
-    const micronsPerPixel = largestImage?.fileDirectory?.ImageDescription?.split("|").find(s => s.includes("MPP")).split("=")[1].trim()
+    if (largestImage?.fileDirectory?.ImageDescription && largestImage.fileDirectory.ImageDescription.includes("MPP")) {
+      const micronsPerPixel = largestImage.fileDirectory.ImageDescription.split("|").find(s => s.includes("MPP")).split("=")[1].trim()
+      pixelsPerMeter = 1 / (parseFloat(micronsPerPixel) * Math.pow(10, -6))
+    }
     
     if (micronsPerPixel) {
       pixelsPerMeter = 1 / (parseFloat(micronsPerPixel) * Math.pow(10, -6))
@@ -204,8 +207,8 @@ const imagebox3 = (() => {
       if (tiff[imageID].pyramid.loadedCount !== imageCount) {
         tiff[imageID].pyramid.loadedCount = 0
 
-        // Discard the last 2 images since they generally contain slide info and are not useful for tiling.
-        const imageRequests = [ ...Array(imageCount - 2) ].map((_, ind) => tiff[imageID].pyramid.getImage(ind)) 
+        // Optionally, discard the last 2 images since they generally contain slide info and are not useful for tiling.
+        const imageRequests = [ ...Array(imageCount) ].map((_, ind) => tiff[imageID].pyramid.getImage(ind)) 
         const resolvedPromises = await Promise.allSettled(imageRequests)
         tiff[imageID].pyramid.loadedCount = resolvedPromises.filter(v => v.status === "fulfilled").length
         
@@ -250,7 +253,7 @@ const imagebox3 = (() => {
     let data = await thumbnailImage.readRasters({
       width: thumbnailWidthToRender,
       height: thumbnailHeightToRender,
-      pool: $.pool
+      pool: $.workerPool
     })
 
     const imageResponse = await utils.convertToImageBlob(data, thumbnailWidthToRender, thumbnailHeightToRender)
@@ -299,7 +302,7 @@ const imagebox3 = (() => {
         tileInImageRightCoord,
         tileInImageBottomCoord,
       ],
-      pool: $.pool
+      pool: $.workerPool
     })
 
     const imageResponse = await utils.convertToImageBlob(data, tileSize, tileHeightToRender)
@@ -308,13 +311,14 @@ const imagebox3 = (() => {
   
   const createPool = async () => {
     if (!$.workerPool) {
-      $.workerPool = new GeoTIFF.Pool(Math.floor(navigator.hardwareConcurrency/2))
+      $.workerPool = new Pool(Math.floor(navigator.hardwareConcurrency/2))
       await new Promise(res => setTimeout(res, 500)) // Setting up the worker pool is an asynchronous task, give it time to complete before moving on.
     }
   }
 
   const destroyPool = async () => {
     $.workerPool?.destroy()
+    $.workerPool = undefined
   }
   
   [getImageInfo, getImageThumbnail, getImageTile, createPool, destroyPool].forEach(method => {

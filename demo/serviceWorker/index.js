@@ -220,7 +220,7 @@ imgBox.loadImage = async (url=document.getElementById("imageURLInput").value) =>
 
   const tileSource = await imgBox.createTileSource(url)
   if (!tileSource) {
-    //alert("Error retrieving image information!")
+    alert("Error retrieving image information!")
     return undefined
   }
   
