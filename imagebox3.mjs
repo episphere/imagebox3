@@ -178,10 +178,6 @@ const imagebox3 = (() => {
       pixelsPerMeter = 1 / (parseFloat(micronsPerPixel) * Math.pow(10, -6))
     }
     
-    if (micronsPerPixel) {
-      pixelsPerMeter = 1 / (parseFloat(micronsPerPixel) * Math.pow(10, -6))
-    }
-    
     const response = new Response(
       JSON.stringify({
         width,
