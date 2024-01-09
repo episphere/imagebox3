@@ -270,7 +270,7 @@ var imagebox3 = (() => {
       thumbnailHeightToRender = Math.floor(thumbnailImage.getHeight() * thumbnailWidthToRender / thumbnailImage.getWidth())
     }
     else if (thumbnailHeightToRender && !thumbnailWidthToRender) {
-      thumbnailWidthToRender = Math.floor(thumbnailImage.getHeight() * thumbnailHeightToRender / thumbnailImage.getWidth())
+      thumbnailWidthToRender = Math.floor(thumbnailImage.getWidth() * thumbnailHeightToRender / thumbnailImage.getHeight())
     }
 
     let data = await thumbnailImage.readRasters({
