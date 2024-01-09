@@ -254,9 +254,9 @@ var imagebox3 = (() => {
 
     const parsedTileParams = utils.parseTileParams(tileParams)
 
-    const { thumbnailWidthToRender } = parsedTileParams
-    if (!Number.isInteger(thumbnailWidthToRender)) {
-      console.error("Thumbnail Request missing critical parameters!", thumbnailWidthToRender)
+    let { thumbnailWidthToRender, thumbnailHeightToRender } = parsedTileParams
+    if (!Number.isInteger(thumbnailWidthToRender) && !Number.isInteger(thumbnailHeightToRender)) {
+      console.error("Thumbnail Request missing critical parameters!", thumbnailWidthToRender, thumbnailHeightToRender)
       return
     }
 
@@ -265,7 +265,13 @@ var imagebox3 = (() => {
     }
 
     const thumbnailImage = await tiff[imageID].pyramid.getImage(1)
-    const thumbnailHeightToRender = Math.floor(thumbnailImage.getHeight() * thumbnailWidthToRender / thumbnailImage.getWidth())
+
+    if (thumbnailWidthToRender && !thumbnailHeightToRender) {
+      thumbnailHeightToRender = Math.floor(thumbnailImage.getHeight() * thumbnailWidthToRender / thumbnailImage.getWidth())
+    }
+    else if (thumbnailHeightToRender && !thumbnailWidthToRender) {
+      thumbnailWidthToRender = Math.floor(thumbnailImage.getHeight() * thumbnailHeightToRender / thumbnailImage.getWidth())
+    }
 
     let data = await thumbnailImage.readRasters({
       width: thumbnailWidthToRender,
