@@ -211,14 +211,14 @@ var imagebox3 = (() => {
     return response
   }
 
-  const getImagesInPyramid = async (imageID) => {
+  const getImagesInPyramid = async (imageID, cache=true) => {
     // Get all images in the pyramid.    
     
     tiff[imageID] = tiff[imageID] || {}
 
     try {
-     
-      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await GeoTIFF.fromUrl(imageID, { headers: {'Cache-Control': "no-cache, no-store"}}) )
+      const headers = cache ? { headers: {'Cache-Control': "no-cache, no-store"}} : {}
+      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await GeoTIFF.fromUrl(imageID, headers) )
 
       const imageCount = await tiff[imageID].pyramid.getImageCount()
       if (tiff[imageID].pyramid.loadedCount !== imageCount) {
@@ -242,7 +242,10 @@ var imagebox3 = (() => {
       }
       
     } catch (e) {
-      console.error("Couldn't get images", e)  
+      console.error("Couldn't get images", e)
+      if (cache) { // Retry in case Cache-Control is not part of Access-Control-Allow-Headers in preflight response
+        await getImagesInPyramid(imageID, !cache)
+      }
     }
     return
   }
