@@ -282,7 +282,6 @@ imgBox.addServiceWorker = async () => {
     navigator.serviceWorker.register(`../../imagebox3.js?tileServerPathSuffix=${tileServerPathSuffix}`)
 		.catch((error) => {
       console.log('Service worker registration failed', error)
-      reject(error)
 		})
     await navigator.serviceWorker.ready
 	}

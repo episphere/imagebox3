@@ -218,7 +218,7 @@ var imagebox3 = (() => {
 
     try {
       const headers = cache ? { headers: {'Cache-Control': "no-cache, no-store"}} : {}
-      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await GeoTIFF.fromUrl(imageID, headers) )
+      tiff[imageID].pyramid = tiff[imageID].pyramid || ( imageID instanceof File ? await GeoTIFF.fromBlob(imageID) : await GeoTIFF.fromUrl(imageID, headers) )
 
       const imageCount = await tiff[imageID].pyramid.getImageCount()
       if (tiff[imageID].pyramid.loadedCount !== imageCount) {

@@ -1,6 +1,6 @@
 // DO NOT USE THIS FILE IN SERVICE WORKERS. USE imagebox3.js INSTEAD.
 
-import { fromUrl, Pool } from "https://cdn.jsdelivr.net/npm/geotiff@2.0.7/+esm"
+import { fromBlob, fromUrl, Pool } from "https://cdn.jsdelivr.net/npm/geotiff@2.0.7/+esm"
 
 const imagebox3 = (() => {
 
@@ -197,7 +197,7 @@ const imagebox3 = (() => {
 
     try {
       const headers = cache ? { headers: {'Cache-Control': "no-cache, no-store"}} : {}
-      tiff[imageID].pyramid = tiff[imageID].pyramid || ( await fromUrl(imageID, headers) )
+      tiff[imageID].pyramid = tiff[imageID].pyramid || ( imageID instanceof File ? await fromBlob(imageID) : await fromUrl(imageID, headers) )
 
       const imageCount = await tiff[imageID].pyramid.getImageCount()
       if (tiff[imageID].pyramid.loadedCount !== imageCount) {
