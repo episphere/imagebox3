@@ -91,6 +91,14 @@ const imagebox3 = (() => {
       return parsedTileParams
     },
     
+    getImageKeyForCache: (imageID) => {
+      let imageKey = imageID
+      if (imageID instanceof File) {
+        imageKey = imageID.name
+      }
+      return imageKey
+    },
+    
     getImageByRatio: async (tiffPyramid, tileWidth, tileWidthToRender) => {
       // Return the index of the appropriate image in the pyramid for the requested tile
       // by comparing the ratio of the width of the requested tile and the requested resolution, 
@@ -167,12 +175,14 @@ const imagebox3 = (() => {
 
   const getImageInfo = async (imageID) => {
     // Get basic information about the image (width, height, MPP)
-    
     let pixelsPerMeter = undefined
+    
+    const imageKey = utils.getImageKeyForCache(imageID)
     await getImagesInPyramid(imageID, true)
     
-    const { maxWidth: width, maxHeight: height} = tiff[imageID].pyramid
-    const largestImage = await tiff[imageID].pyramid.getImage(0)
+    const { maxWidth: width, maxHeight: height} = tiff[imageKey].pyramid
+    
+    const largestImage = await tiff[imageKey].pyramid.getImage(0)
     if (largestImage?.fileDirectory?.ImageDescription && largestImage.fileDirectory.ImageDescription.includes("MPP")) {
       const micronsPerPixel = largestImage.fileDirectory.ImageDescription.split("|").find(s => s.includes("MPP")).split("=")[1].trim()
       pixelsPerMeter = 1 / (parseFloat(micronsPerPixel) * Math.pow(10, -6))
@@ -191,32 +201,33 @@ const imagebox3 = (() => {
   }
 
   const getImagesInPyramid = async (imageID, cache=true) => {
-    // Get all images in the pyramid.    
+    // Get all images in the pyramid.
     
-    tiff[imageID] = tiff[imageID] || {}
+    const imageKey = utils.getImageKeyForCache(imageID)
+    tiff[imageKey] = tiff[imageKey] || {}
 
     try {
       const headers = cache ? { headers: {'Cache-Control': "no-cache, no-store"}} : {}
-      tiff[imageID].pyramid = tiff[imageID].pyramid || ( imageID instanceof File ? await fromBlob(imageID) : await fromUrl(imageID, headers) )
+      tiff[imageKey].pyramid = tiff[imageKey].pyramid || ( imageID instanceof File ? await fromBlob(imageID) : await fromUrl(imageID, headers) )
 
-      const imageCount = await tiff[imageID].pyramid.getImageCount()
-      if (tiff[imageID].pyramid.loadedCount !== imageCount) {
-        tiff[imageID].pyramid.loadedCount = 0
+      const imageCount = await tiff[imageKey].pyramid.getImageCount()
+      if (tiff[imageKey].pyramid.loadedCount !== imageCount) {
+        tiff[imageKey].pyramid.loadedCount = 0
 
         // Optionally, discard the last 2 images since they generally contain slide info and are not useful for tiling.
-        const imageRequests = [ ...Array(imageCount) ].map((_, ind) => tiff[imageID].pyramid.getImage(ind)) 
+        const imageRequests = [ ...Array(imageCount) ].map((_, ind) => tiff[imageKey].pyramid.getImage(ind)) 
         const resolvedPromises = await Promise.allSettled(imageRequests)
-        tiff[imageID].pyramid.loadedCount = resolvedPromises.filter(v => v.status === "fulfilled").length
+        tiff[imageKey].pyramid.loadedCount = resolvedPromises.filter(v => v.status === "fulfilled").length
         
         if (resolvedPromises[0].status === "fulfilled") {
           // Note the width and height of the largest image in the pyramid for later ratio calculations.
           const largestImage = resolvedPromises[0].value
           const [width, height] = [largestImage.getWidth(), largestImage.getHeight()]
-          tiff[imageID].pyramid.maxWidth = width
-          tiff[imageID].pyramid.maxHeight = height
+          tiff[imageKey].pyramid.maxWidth = width
+          tiff[imageKey].pyramid.maxHeight = height
         } else {
-          tiff[imageID].pyramid.maxWidth = NaN
-          tiff[imageID].pyramid.maxHeight = NaN
+          tiff[imageKey].pyramid.maxWidth = NaN
+          tiff[imageKey].pyramid.maxHeight = NaN
         }
       }
       
@@ -235,18 +246,20 @@ const imagebox3 = (() => {
     }
 
     const parsedTileParams = utils.parseTileParams(tileParams)
-
     let { thumbnailWidthToRender, thumbnailHeightToRender } = parsedTileParams
+    
     if (!Number.isInteger(thumbnailWidthToRender) && !Number.isInteger(thumbnailHeightToRender)) {
       console.error("Thumbnail Request missing critical parameters!", thumbnailWidthToRender, thumbnailHeightToRender)
       return
     }
 
-    if (!(tiff[imageID] && tiff[imageID].pyramid) || tiff[imageID].pyramid.loadedCount === 0) {
+    const imageKey = utils.getImageKeyForCache(imageID)
+
+    if (!(tiff[imageKey] && tiff[imageKey].pyramid) || tiff[imageKey].pyramid.loadedCount === 0) {
       await getImagesInPyramid(imageID, false)
     }
 
-    const thumbnailImage = await tiff[imageID].pyramid.getImage(1)
+    const thumbnailImage = await tiff[imageKey].pyramid.getImage(1)
     
     if (!thumbnailHeightToRender) {
       thumbnailHeightToRender = Math.floor(thumbnailImage.getHeight() * thumbnailWidthToRender / thumbnailImage.getWidth())
@@ -273,7 +286,6 @@ const imagebox3 = (() => {
     }
 
     const parsedTileParams = utils.parseTileParams(tileParams)
-    
     const { tileX, tileY, tileWidth, tileHeight, tileSize } = parsedTileParams
     
     if (!Number.isInteger(tileX) || !Number.isInteger(tileY) || !Number.isInteger(tileWidth) || !Number.isInteger(tileHeight) || !Number.isInteger(tileSize)) {
@@ -281,17 +293,19 @@ const imagebox3 = (() => {
       return
     }
 
-    if (!(tiff[imageID] && tiff[imageID].pyramid) || tiff[imageID].pyramid.loadedCount === 0) {
+    const imageKey = utils.getImageKeyForCache(imageID)
+
+    if (!(tiff[imageKey] && tiff[imageKey].pyramid) || tiff[imageKey].pyramid.loadedCount === 0) {
       await getImagesInPyramid(imageID, false)
     }
 
-    const optimalImageInTiff = await utils.getImageByRatio(tiff[imageID].pyramid, tileWidth, tileSize)
+    const optimalImageInTiff = await utils.getImageByRatio(tiff[imageKey].pyramid, tileWidth, tileSize)
 
     const optimalImageWidth = optimalImageInTiff.getWidth()
     const optimalImageHeight = optimalImageInTiff.getHeight()
     const tileHeightToRender = Math.floor( tileHeight * tileSize / tileWidth)
 
-    const { maxWidth, maxHeight } = tiff[imageID].pyramid
+    const { maxWidth, maxHeight } = tiff[imageKey].pyramid
 
     const tileInImageLeftCoord = Math.max(Math.floor(tileX * optimalImageWidth / maxWidth), 0)
     const tileInImageTopCoord = Math.max(Math.floor(tileY * optimalImageHeight / maxHeight), 0)
