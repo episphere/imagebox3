@@ -1,6 +1,6 @@
 // DO NOT USE THIS FILE IN SERVICE WORKERS. USE imagebox3.js INSTEAD.
 
-import { fromBlob, fromUrl, Pool } from "https://cdn.jsdelivr.net/npm/geotiff@2.0.7/+esm"
+import { fromBlob, fromUrl, Pool, getDecoder } from "https://cdn.jsdelivr.net/npm/geotiff@2.1.2/+esm"
 
 const imagebox3 = (() => {
 
@@ -34,7 +34,7 @@ const imagebox3 = (() => {
       self.clients.claim()
     }
 
-    self.tileServerBasePath = utils.loadTileServerURL()
+    self.tileServerBasePath = utils.defineTileServerURL()
 
     self.addEventListener("fetch", (e) => {
       
@@ -77,6 +77,15 @@ const imagebox3 = (() => {
 
   let tiff = {} // Variable to cache GeoTIFF instance per image for reuse.
   const imageInfoContext = "http://iiif.io/api/image/2/context.json"
+
+  const baseURL = import.meta.url.split("/").slice(0,-1).join("/");
+  const decodersJSON_URL = `${baseURL}/decoders/decoders.json`;
+  
+  let supportedDecoders = {};
+  fetch(decodersJSON_URL).then(resp => resp.json()).then(decoders => {
+      supportedDecoders = decoders
+      console.log(supportedDecoders)
+  })
 
   const utils = {
     parseTileParams: (tileParams) => {
@@ -241,9 +250,7 @@ const imagebox3 = (() => {
   }
 
   const getImageThumbnail = async (imageID, tileParams, pool=false) => {
-    if (pool) {
-      await createPool()
-    }
+    
 
     const parsedTileParams = utils.parseTileParams(tileParams)
     let { thumbnailWidthToRender, thumbnailHeightToRender } = parsedTileParams
@@ -260,7 +267,10 @@ const imagebox3 = (() => {
     }
 
     const thumbnailImage = await tiff[imageKey].pyramid.getImage(1)
-    
+    if (pool) {
+      await createPool(thumbnailImage)
+    }
+
     if (!thumbnailHeightToRender) {
       thumbnailHeightToRender = Math.floor(thumbnailImage.getHeight() * thumbnailWidthToRender / thumbnailImage.getWidth())
     }
@@ -281,14 +291,11 @@ const imagebox3 = (() => {
 
   const getImageTile = async (imageID, tileParams, pool=false) => {
     // Get individual tiles from the appropriate image in the pyramid.
-    if (pool) {
-      await createPool()
-    }
 
     const parsedTileParams = utils.parseTileParams(tileParams)
     const { tileX, tileY, tileWidth, tileHeight, tileSize } = parsedTileParams
     
-    if (!Number.isInteger(tileX) || !Number.isInteger(tileY) || !Number.isInteger(tileWidth) || !Number.isInteger(tileHeight) || !Number.isInteger(tileSize)) {
+    if (!Number.isInteger(tileX) || !Number.isIntegoer(tileY) || !Number.isInteger(tileWidth) || !Number.isInteger(tileHeight) || !Number.isInteger(tileSize)) {
       console.error("Tile Request missing critical parameters!", tileX, tileY, tileWidth, tileHeight, tileSize)
       return
     }
@@ -304,6 +311,10 @@ const imagebox3 = (() => {
     const optimalImageWidth = optimalImageInTiff.getWidth()
     const optimalImageHeight = optimalImageInTiff.getHeight()
     const tileHeightToRender = Math.floor( tileHeight * tileSize / tileWidth)
+
+    if (pool) {
+      await createPool(optimalImageInTiff)
+    }
 
     const { maxWidth, maxHeight } = tiff[imageKey].pyramid
 
@@ -328,14 +339,39 @@ const imagebox3 = (() => {
     return imageResponse
   }
   
-  const createPool = async () => {
-    if (!$.workerPool) {
-      $.workerPool = new Pool(Math.floor(navigator.hardwareConcurrency/2))
+  const createPool = async (tiffImage) => {
+    if (typeof(Worker) !== 'undefined') {
+      // Condition to check if this is a service worker-like environment. Service workers cannot create workers, 
+      // plus the GeoTIFF version has to be downgraded to avoid any dynamic imports.
+      // As a result, thread creation and non-standard image decoding does not work inside service workers. You would typically 
+      // only use service workers to support OpenSeadragon anyway, in which case you'd be better off using something like
+      // https://github.com/episphere/GeoTIFFTileSource-JPEG2k .
+
+      const imageCompression = tiffImage?.fileDirectory.Compression
+      const geotiffSupportsCompression = typeof(getDecoder(tiffImage.fileDirectory)) === 'function'
+      const decoderForCompression = supportedDecoders?.[imageCompression]
+      
+      let createWorker = undefined
+      if (decoderForCompression) {
+        createWorker = () => new Worker( URL.createObjectURL( new Blob([`
+          importScripts("${baseURL}/decoders/${decoderForCompression}")
+        `])));
+      }
+      
+      if (!$.workerPool) {
+        $.workerPool = new Pool(Math.min(Math.floor(navigator.hardwareConcurrency/2), 1), createWorker)
+        $.workerPool.supportedCompression = imageCompression
+      } else if (!geotiffSupportsCompression && $.workerPool.supportedCompression !== imageCompression) {
+        destroyPool()
+        $.workerPool = new Pool(Math.min(Math.floor(navigator.hardwareConcurrency/2), 1), createWorker)
+        $.workerPool.supportedCompression = imageCompression
+      }
+      
       await new Promise(res => setTimeout(res, 500)) // Setting up the worker pool is an asynchronous task, give it time to complete before moving on.
     }
   }
 
-  const destroyPool = async () => {
+  const destroyPool = () => {
     $.workerPool?.destroy()
     $.workerPool = undefined
   }

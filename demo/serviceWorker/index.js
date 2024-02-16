@@ -279,7 +279,7 @@ imgBox.changeImage = () => {
 
 imgBox.addServiceWorker = async () => {
 	if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register(`../../imagebox3.js?tileServerPathSuffix=${tileServerPathSuffix}`)
+    navigator.serviceWorker.register(`../../imagebox3.js?tileServerPathSuffix=${tileServerPathSuffix}`, {type: 'classic'})
 		.catch((error) => {
       console.log('Service worker registration failed', error)
 		})
