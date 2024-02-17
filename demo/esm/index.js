@@ -104,7 +104,7 @@ imgBox.loadTile = async ({fileURL, tileX, tileY, tileWidth, tileHeight, tileSize
     tileWidth,
     tileHeight,
     tileSize
-  }, true)).blob())
+  }, 1)).blob())
   tileElement.onload = () => {
     URL.revokeObjectURL(tileElement.src)
   }
