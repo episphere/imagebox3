@@ -295,7 +295,7 @@ const imagebox3 = (() => {
     const parsedTileParams = utils.parseTileParams(tileParams)
     const { tileX, tileY, tileWidth, tileHeight, tileSize } = parsedTileParams
     
-    if (!Number.isInteger(tileX) || !Number.isIntegoer(tileY) || !Number.isInteger(tileWidth) || !Number.isInteger(tileHeight) || !Number.isInteger(tileSize)) {
+    if (!Number.isInteger(tileX) || !Number.isInteger(tileY) || !Number.isInteger(tileWidth) || !Number.isInteger(tileHeight) || !Number.isInteger(tileSize)) {
       console.error("Tile Request missing critical parameters!", tileX, tileY, tileWidth, tileHeight, tileSize)
       return
     }
