@@ -98,7 +98,7 @@ imgBox.loadTile = async ({fileURL, tileX, tileY, tileWidth, tileHeight, tileSize
     tileSizeElement.value = tileSize
   }
   
-  if (imgBox.image?.getImage() !== decodeURIComponent(fileURL)) {
+  if (imgBox.image?.getImageSource() !== decodeURIComponent(fileURL)) {
     const numWorkers = 4
     imgBox.image = new Imagebox3(decodeURIComponent(fileURL), numWorkers)
     await imgBox.image.init()
