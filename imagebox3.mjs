@@ -36,8 +36,8 @@ class Imagebox3 {
     await this.createWorkerPool(this.numWorkers)
   }
 
-  getImage() {
-    return this.image
+  getImageSource() {
+    return this.imageSource
   }
 
   getPyramid() {
