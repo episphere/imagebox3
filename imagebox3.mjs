@@ -5,7 +5,7 @@ import { fromBlob, fromUrl, Pool, getDecoder, globals } from "https://cdn.jsdeli
 class Imagebox3 {
   constructor(imageSource, numWorkers) {
     if (imageSource instanceof File || typeof(imageSource) === 'string') {
-      this.imageSource = imageSource
+      this.imageSource = typeof(imageSource) === 'string' ? decodeURIComponent(imageSource) : imageSource
     } else {
       throw new Error("Unsupported image type for ImageBox3")
     }
@@ -14,7 +14,6 @@ class Imagebox3 {
     this.numWorkers = typeof(numWorkers) === 'number' ? numWorkers : Math.max(Math.floor(navigator.hardwareConcurrency / 2), 1)
     this.workerPool = undefined
     this.supportedDecoders = undefined
-    
   }
   
   async init() {
@@ -40,11 +39,17 @@ class Imagebox3 {
     return this.imageSource
   }
 
+  async changeImageSource(newImageSource) {
+    this.imageSource = typeof(newImageSource) === 'string' ? decodeURIComponent(newImageSource) : newImageSource
+    await this.init()
+  }
+
   getPyramid() {
     return this.tiff
   }
 
   async createWorkerPool(numWorkers) {
+    // TODO: Load only the decoders necessary for the current image, instead of having them all active.
     if (this.workerPool) {
       destroyPool(this.workerPool)
     }
@@ -382,7 +387,6 @@ export const createPool = async (tiffImage, numWorkers=0, supportedDecoders) => 
       await getDecoder(tiffImage.fileDirectory)
     } catch (e) {
       if (e.message.includes("Unknown compression method")) {
-        console.log(e.message)
         const decoderForCompression = supportedDecoders?.[imageCompression]    
         if (decoderForCompression) {
           const baseURL = import.meta.url.split("/").slice(0,-1).join("/");

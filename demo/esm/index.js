@@ -98,10 +98,12 @@ imgBox.loadTile = async ({fileURL, tileX, tileY, tileWidth, tileHeight, tileSize
     tileSizeElement.value = tileSize
   }
   
-  if (imgBox.image?.getImageSource() !== decodeURIComponent(fileURL)) {
+  if (!imgBox.image) {
     const numWorkers = 4
     imgBox.image = new Imagebox3(decodeURIComponent(fileURL), numWorkers)
     await imgBox.image.init()
+  } else if (imgBox.image?.getImageSource() !== decodeURIComponent(fileURL)) {
+    await imgBox.image.changeImageSource(fileURL)
   }
 
   tileElement.src = URL.createObjectURL(await (await imgBox.image.getTile(tileX, tileY, tileWidth, tileHeight, tileSize)).blob())
