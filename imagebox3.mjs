@@ -68,8 +68,8 @@ class Imagebox3 {
 
   async getThumbnail(thumbnailWidth=512, thumbnailHeight=512) {
     const tileParams = {
-      thumbnailWidth,
-      thumbnailHeight
+      thumbnailWidthToRender: thumbnailWidth,
+      thumbnailHeightToRender: thumbnailHeight
     }
     return await getImageThumbnail(this.tiff.pyramid, tileParams, this.workerPool)
   }
