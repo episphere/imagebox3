@@ -11,7 +11,7 @@ class Imagebox3 {
     }
 
     this.tiff = undefined
-    this.numWorkers = numWorkers || Math.max(Math.floor(navigator.hardwareConcurrency / 2), 1)
+    this.numWorkers = typeof(numWorkers) === 'number' ? numWorkers : Math.max(Math.floor(navigator.hardwareConcurrency / 2), 1)
     this.workerPool = undefined
     this.supportedDecoders = undefined
     
