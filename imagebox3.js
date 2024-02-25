@@ -100,7 +100,7 @@ var imagebox3 = (() => {
   let tiff = {} // Variable to cache GeoTIFF instance per image for reuse.
   const imageInfoContext = "http://iiif.io/api/image/2/context.json"
 
-  const decodersJSON_URL = `http://localhost:8081/decoders/decoders.json`;
+  const decodersJSON_URL = `https://episphere.github.io/imagebox3/decoders/decoders.json`;
   
   let supportedDecoders = {};
   fetch(decodersJSON_URL).then(resp => resp.json()).then(decoders => {

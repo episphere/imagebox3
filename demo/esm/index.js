@@ -1,4 +1,4 @@
-import imagebox3 from "../../imagebox3.mjs"
+import Imagebox3 from "../../imagebox3.mjs"
 
 const imgBox = {}
 
@@ -98,13 +98,13 @@ imgBox.loadTile = async ({fileURL, tileX, tileY, tileWidth, tileHeight, tileSize
     tileSizeElement.value = tileSize
   }
   
-  tileElement.src = URL.createObjectURL(await (await imagebox3.getImageTile(decodeURIComponent(fileURL), {
-    tileX,
-    tileY,
-    tileWidth,
-    tileHeight,
-    tileSize
-  }, 1)).blob())
+  if (imgBox.image?.getImage() !== decodeURIComponent(fileURL)) {
+    const numWorkers = 4
+    imgBox.image = new Imagebox3(decodeURIComponent(fileURL), numWorkers)
+    await imgBox.image.init()
+  }
+
+  tileElement.src = URL.createObjectURL(await (await imgBox.image.getTile(tileX, tileY, tileWidth, tileHeight, tileSize)).blob())
   tileElement.onload = () => {
     URL.revokeObjectURL(tileElement.src)
   }
