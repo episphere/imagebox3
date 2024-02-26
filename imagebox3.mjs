@@ -71,7 +71,7 @@ class Imagebox3 {
     return await getImageInfo(this.tiff.pyramid)
   }
 
-  async getThumbnail(thumbnailWidth=512, thumbnailHeight=512) {
+  async getThumbnail(thumbnailWidth, thumbnailHeight) {
     const tileParams = {
       thumbnailWidthToRender: thumbnailWidth,
       thumbnailHeightToRender: thumbnailHeight
@@ -289,16 +289,15 @@ export const getImageThumbnail = async (imagePyramid, tileParams, pool) => {
   let { thumbnailWidthToRender, thumbnailHeightToRender } = parsedTileParams
   
   if (!Number.isInteger(thumbnailWidthToRender) && !Number.isInteger(thumbnailHeightToRender)) {
-    console.error("Thumbnail Request missing critical parameters!", thumbnailWidthToRender, thumbnailHeightToRender)
-    return
+    throw new Error(`Thumbnail Request missing critical parameters: thumbnailWidthToRender:${thumbnailWidthToRender}, thumbnailHeightToRender:${thumbnailHeightToRender}`)
   }
 
   const thumbnailImage = await imagePyramid.getImage(1)
 
-  if (typeof(thumbnailHeightToRender) !== 'undefined') {
+  if (!Number.isInteger(thumbnailHeightToRender) || ( Number.isInteger(thumbnailWidthToRender) && thumbnailImage.getWidth() >= thumbnailImage.getHeight() ) ) {
     thumbnailHeightToRender = Math.floor(thumbnailImage.getHeight() * thumbnailWidthToRender / thumbnailImage.getWidth())
   }
-  else if (typeof(thumbnailWidthToRender) !== 'undefined') {
+  else if (!Number.isInteger(thumbnailWidthToRender) || ( Number.isInteger(thumbnailHeightToRender) && thumbnailImage.getWidth() < thumbnailImage.getHeight() ) ) {
     thumbnailWidthToRender = Math.floor(thumbnailImage.getWidth() * thumbnailHeightToRender / thumbnailImage.getHeight())
   }
 
