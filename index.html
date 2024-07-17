@@ -1,40 +1,231 @@
 <html>
 
 <head>
-    <title>ImageBox3.0 for WSI</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
-    <script type="text/javascript"
-        src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap.native/2.0.27/bootstrap-native-v4.min.js" async></script>
-    <link rel="stylesheet" href="imgBox.css">
+    <title>ImageBox3 for WSI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body>
-    <div class="container-fluid">
-        <div id="header">
+    <div id="container" class="h-full flex flex-col p-3 overflow-x-auto">
 
-            <h1>ImageBox3.0 for WSI
-                <sup>
-                    [<a href="https://github.com/episphere/imagebox3" target="_blank">code</a>]
-                    [<a href="https://github.com/episphere/imagebox3/issues/new" target="_blank">issues</a>]
-                    [<a href="https://youtu.be/_BYlyLUaxis" target="_blank" style="font-size:small; color: red;">YouTube</a>]
-                </sup>
-            </h1>
+        <div id="header" class="h-12 flex flex-row flex-initial justify-start pb-1">
+            <span>
+                <h1 class="text-4xl text-red-800 sm:truncate sm:text-4xl sm:tracking-wide w-max sm:w-max">ImageBox3
+                    for WSI</h1>
+            </span>
 
-
-            <p id="welcomeMsg">Welcome!</p>
+            <span class="ml-2 mt-2">
+                <span class="text-sm">
+                    [<a href="https://github.com/episphere/imagebox3" target="_blank"
+                        class="text-indigo-600 hover:underline">code</a>]
+                </span>
+                <span class="text-sm">
+                    [<a href="https://github.com/episphere/imagebox3/issues/new" target="_blank"
+                        class="text-indigo-600 hover:underline">issues</a>]
+                </span>
+                <span class="text-sm">
+                    [<a href="https://youtu.be/_BYlyLUaxis" target="_blank"
+                        class="text-red-500 hover:underline">YouTube</a>]
+                </span>
+            </span>
+        </div>
+        <hr/>
+        <div class="w-full py-2">
+            <p class="text-gray-700 pb-1">ImageBox3 is an in-browser mechanism for zero-footprint patch extraction from TIFF-based Whole Slide Imaging (WSI) data. No (server-side) tiling service needed!</p>
+            <p class="text-gray-700 pb-1">All computation is being performed on your device, thus ensuring complete user governance while operating public and private images alike.</p>
+            <p class="text-gray-700 pb-1">ImageBox3 is freely usable and immediately portable to any device with a web browser. Try it below:</p>
+            <p class="text-gray-700">(The viewer on the left uses <a href="https://openseadragon.github.io/" class="cursor-pointer text-indigo-600 underline">OpenSeadragon</a> + <a href="https://github.com/episphere/GeoTIFFTileSource-JPEG2k" class="cursor-pointer text-indigo-600 underline">a fork</a> of the <a href="https://github.com/pearcetm/GeoTIFFTileSource" class="cursor-pointer text-indigo-600 underline">GeoTIFFTileSource plugin</a>.)</p>
+        </div>
+        <hr/>
+        <div id="dataInput" class="w-full h-12 flex flex-initial justify-start py-1.5 align-middle">
+            
+            <form class="w-full h-full flex-auto flex gap-x-1" id="wsiURLForm">
+                <input type="url" name="wsiURL" id="wsiURL"
+                    class="block w-full flex-initial rounded-md border-0 pl-7 pr-7 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                    placeholder="Enter URL to Whole Slide Image" required>
+                
+                <button type="submit" id="wsiURLSubmit"
+                    class="flex flex-row w-max flex-none justify-center rounded-md bg-indigo-600 px-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+            
+                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                        width="23.06" height="19.62" class="mr-2 my-auto" viewBox="0,0,72,72">
+                        <g fill="#ffffff" fill-rule="nonzero" stroke="none" stroke-width="1" stroke-linecap="butt"
+                            stroke-linejoin="miter" stroke-miterlimit="10" stroke-dasharray="" stroke-dashoffset="0"
+                            font-family="none" font-weight="none" font-size="none" text-anchor="none"
+                            style="mix-blend-mode: normal">
+                            <g transform="scale(1.5,1.5)">
+                                <path
+                                    d="M29,4.53125c-5.21484,0 -9.62891,3.12109 -11.75,7.53125c-1.12891,-0.77734 -2.4375,-1.34375 -3.90625,-1.34375c-3.72656,0 -6.69922,2.94922 -6.90625,6.625c-3.72656,1.34375 -6.4375,4.82031 -6.4375,9c0,5.32813 4.32813,9.65625 9.65625,9.65625h8.34375c0.35938,0.00391 0.69531,-0.18359 0.87891,-0.49609c0.17969,-0.3125 0.17969,-0.69531 0,-1.00781c-0.18359,-0.3125 -0.51953,-0.5 -0.87891,-0.49609h-8.34375c-4.25,0 -7.65625,-3.41016 -7.65625,-7.65625c0,-3.53516 2.38281,-6.51172 5.625,-7.40625c0.44141,-0.12891 0.73828,-0.54297 0.71875,-1c-0.00391,-0.14062 0,-0.21094 0,-0.21875c0,-2.77734 2.22266,-5 5,-5c1.39063,0 2.65625,0.55859 3.5625,1.46875c0.23828,0.23047 0.57813,0.33203 0.90234,0.26172c0.32813,-0.07031 0.59766,-0.29687 0.72266,-0.60547c1.57422,-4.25 5.66016,-7.3125 10.46875,-7.3125c6.17188,0 11.15625,4.98828 11.15625,11.15625c0,0.45703 -0.03516,0.90625 -0.09375,1.375c-0.03516,0.28125 0.05078,0.5625 0.23438,0.77734c0.18359,0.21484 0.45313,0.33984 0.73438,0.34766h0.0625c3.82422,0 6.90625,3.08203 6.90625,6.90625c0,3.82422 -3.08203,6.90625 -6.90625,6.90625h-9.09375c-0.35937,-0.00391 -0.69531,0.18359 -0.87891,0.49609c-0.17969,0.3125 -0.17969,0.69531 0,1.00781c0.18359,0.3125 0.51953,0.5 0.87891,0.49609h9.09375c4.90625,0 8.90625,-4 8.90625,-8.90625c0,-4.55078 -3.49219,-8.16797 -7.90625,-8.6875c0.01563,-0.24219 0.0625,-0.46875 0.0625,-0.71875c0,-7.25 -5.90625,-13.15625 -13.15625,-13.15625zM24.90625,24.96875c-0.04297,0.00781 -0.08594,0.01953 -0.125,0.03125c-0.46484,0.10547 -0.79297,0.52344 -0.78125,1v17.5625l-3.28125,-3.28125c-0.24219,-0.25 -0.59766,-0.35547 -0.9375,-0.28125c-0.375,0.06641 -0.67578,0.33984 -0.78125,0.70313c-0.10547,0.36719 0.00391,0.75781 0.28125,1.01563l5,5l0.71875,0.6875l0.71875,-0.6875l5,-5c0.39844,-0.39844 0.39844,-1.03906 0,-1.4375c-0.39844,-0.39844 -1.03906,-0.39844 -1.4375,0l-3.28125,3.28125v-17.5625c0.01172,-0.28906 -0.10547,-0.56641 -0.3125,-0.76172c-0.21094,-0.19922 -0.49609,-0.29687 -0.78125,-0.26953z">
+                                </path>
+                            </g>
+                        </g>
+                    </svg>
+                
+                    <div class="my-auto">
+                        Load URL
+                    </div>
+                
+                </button>
+            </form>
+            
+            <span class="flex-auto mx-3 align-middle my-auto">
+                <strong class="block"> OR </strong>
+            </span>
+            
+            <span class="w-1/3 flex-initial grid">
+                <label
+                    class="w-full h-full flex flex-row justify-center rounded-md bg-indigo-600 px-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+            
+                    <input type="file" class="hidden" id="wsiLocalFile" />
+            
+                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                        width="20" height="21.54" class="mr-2 my-auto" viewBox="0,0,72,72">
+                        <g fill="#ffffff" fill-rule="nonzero" stroke="none" stroke-width="1" stroke-linecap="butt"
+                            stroke-linejoin="miter" stroke-miterlimit="10" stroke-dasharray="" stroke-dashoffset="0"
+                            font-family="none" font-weight="none" font-size="none" text-anchor="none"
+                            style="mix-blend-mode: normal">
+                            <g transform="scale(1.5,1.5)">
+                                <path
+                                    d="M12.5,4c-2.481,0 -4.5,2.019 -4.5,4.5v31c0,2.481 2.019,4.5 4.5,4.5h22.5v-3h-22.5c-0.827,0 -1.5,-0.673 -1.5,-1.5v-31c0,-0.827 0.673,-1.5 1.5,-1.5h11.5v8.5c0,2.481 2.019,4.5 4.5,4.5h8.5v6.34961c0.456,-0.218 0.961,-0.34961 1.5,-0.34961c0.539,0 1.044,0.13161 1.5,0.34961v-7.84961c0,-0.414 -0.16808,-0.78905 -0.43945,-1.06055l-13,-13c-0.27137,-0.2715 -0.64605,-0.43945 -1.06055,-0.43945zM27,9.12109l7.87891,7.87891h-6.37891c-0.827,0 -1.5,-0.673 -1.5,-1.5zM38.5,28c-0.384,0 -0.76755,0.14645 -1.06055,0.43945l-5,5c-0.585,0.586 -0.585,1.53509 0,2.12109c0.586,0.586 1.53509,0.586 2.12109,0l2.43945,-2.43945v11.37891c0,0.829 0.671,1.5 1.5,1.5c0.829,0 1.5,-0.671 1.5,-1.5v-11.37891l2.43945,2.43945c0.586,0.586 1.53509,0.586 2.12109,0c0.586,-0.585 0.586,-1.53609 0,-2.12109l-5,-5c-0.292,-0.293 -0.67655,-0.43945 -1.06055,-0.43945z">
+                                </path>
+                            </g>
+                        </g>
+                    </svg>
+                    
+                    <div class="w-max my-auto">
+                        Upload File
+                    </div>
+                
+                </label>
+            </span>
+        </div>
+        
+        <div id="demoLinks" class="w-max h-4 flex-initial grid grid-flow-col gap-x-3 justify-center">
+            
+            <span class="text-sm text-red-800">Demos:</span>
+            
+            <span class="grid grid-flow-col gap-x-3 justify-center divide-x">
+                
+                <span class="text-sm pl-2">
+                    <a id="demo_Aperio_SVS_link" demoLink="https://storage.googleapis.com/imagebox_test/openslide-testdata/Aperio/CMU-1.svs" class="demoLinks cursor-pointer text-indigo-600 hover:underline">
+                        Aperio SVS
+                    </a>
+                </span>
+                
+                <span class="text-sm pl-2">
+                    <a id="demo_Leica_SCN_link" demoLink="https://storage.googleapis.com/imagebox_test/openslide-testdata/Leica/Leica-1.scn" class="demoLinks cursor-pointer text-indigo-600 hover:underline">
+                        Leica SCN
+                    </a>
+                </span>
+                
+                <span class="text-sm pl-2">
+                    <a id="demo_Generic_tiled_TIFF_link" demoLink="https://storage.googleapis.com/imagebox_test/openslide-testdata/Generic-TIFF/CMU-1.tiff" class="demoLinks cursor-pointer text-indigo-600 hover:underline">
+                        Generic tiled TIFF
+                    </a>
+                </span>
+                
+                <span class="text-sm pl-2">
+                    <a id="demo_Philips_TIFF_link" demoLink="https://storage.googleapis.com/imagebox_test/openslide-testdata/Philips-TIFF/Philips-1.tiff" class="demoLinks cursor-pointer text-indigo-600 hover:underline">
+                        Philips TIFF
+                    </a>
+                </span>
+                
+                <span class="hidden text-sm pl-2">
+                    <a id="demo_OME_TIFF_link" disabled demoLink="https://storage.googleapis.com/imagebox_test/openslide-testdata/" class="demoLinks cursor-pointer text-indigo-600 hover:underline">
+                        OME-TIFF
+                    </a>
+                </span>
+                
+                <span class="text-sm pl-2">
+                    <a id="demo_Load_from_GDC_TCGA_link" demoLink="https://api.gdc.cancer.gov/data/c5331e5e-10b4-4979-958b-d4592a2805de" class="demoLinks cursor-pointer text-indigo-600 hover:underline">
+                        Load from GDC-TCGA
+                    </a>
+                </span>
+            </span>
 
         </div>
-        <hr />
-        <div id="demos">
-            <h3>Demos:</h2>
-                <br>
-                <ul>
-                    <li><a href="demo/serviceWorker/index.html">Complete WSI Viewer</a></li>
-                    <br>
-                    <li><a href="demo/esm/index.html">Single Tile Loading</a></li>
-                </ul>
+        
+        
+        <div id="imageViewerParent" class="w-max h-full grid auto-rows-min gap-x-5 mt-4" style="grid-template-columns: 60vw auto;">
+            
+            <div id="wsiViewer" class="w-full min-w-full h-full">
+                <div id="viewer" class="w-full h-full overflow-hidden">
+            
+                    <div id="progressBarContainer"
+                        class="relative top-0 left-0 w-full opacity-0 z-10 transition-opacity duration-500">
+                        <div id="progressBar" class="w-0 h-1 bg-indigo-600 shadow shadow-slate-50"
+                            style="transition: width 0.2s linear;"></div>
+                    </div>
+            
+                    <div id="openseadragon" class="openseadragon w-full h-full bg-black" style="min-height: 75vh; max-height: 85vh;"></div>
+            
+                </div>
+            </div>
+            
+            <div id="tileViewer" class="hidden w-full min-w-72 grid grid-flow-row auto-rows-min gap-y-1">
+                <div id="tileViewerHeader" class="h-max">
+                    <span>
+                        <h2 class="text-xl text-gray-800 sm:truncate sm:text-xl sm:tracking-wide w-max sm:w-max">Extract Patch</h2>
+                    </span>
+                </div>
+                <div id="viewer" class="w-full">
+                    <img id="tileImg" class="block outline-dashed outline-lime-400 place-self-end"
+                        crossorigin="anonymous"></img>
+                </div>
+
+                <div id="imageParams" class="w-full h-max grid grid-cols-2 gap-x-4">
+
+                    <div>
+                        <label for="tileX">X coordinate: </label>
+                        <input type="number" id="tileX" min="0"
+                            class="w-32 inline flex-initial mt-2 pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                    </div>
+                    
+                    <div>
+                        <label for="tileY">Y coordinate: </label>
+                        <input type="number" id="tileY" min="0"
+                            class="w-32 inline flex-initial mt-2 pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                    </div>
+                    
+                    <div>
+                        <label for="tileWidth">Region Width: </label>
+                        <input type="number" id="tileWidth" min="128" max="4096"
+                            class="w-32 inline flex-initial mt-2 pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                    </div>
+                    
+                    <div>
+                        <label for="tileHeigh">Region Height: </label>
+                        <input type="number" id="tileHeight" min="128" max="4096"
+                            class="w-32 inline flex-initial mt-2 pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                    </div>
+                    
+                    <div class="col-span-2">
+                        <label for="tileResolution">Tile Resolution: </label>
+                        <input type="number" id="tileResolution" min="0" max="4096"
+                            class="w-32 inline flex-initial mt-2 pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                        x <span id="tileResCopy"
+                            class="inline flex-initial py-1 text-gray-900 rounded-sm sm:text-sm sm:leading-6"></span>
+                        px
+                    </div>
+                    <!-- <label>Image Height: </label>
+                        <input type="number" id="imageH" value="256" placeholder="256" min="0"> -->
+                </div>
+                <div class="w-full h-max grid grid-cols-2 gap-x-2">
+                    <button id="copyTileURL"
+                        class="flex flex-row w-full flex-none justify-center rounded-md bg-indigo-600 mt-2 p-2 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 active:bg-indigo-800 transition-colors">Copy URL</button>
+                    <button id="downloadTile"
+                        class="flex flex-row w-full flex-none justify-center rounded-md bg-indigo-600 mt-2 p-2 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 active:bg-indigo-800">Download Tile</button>
+                </div>
+            </div>
+
         </div>
+
     </div>
 </body>
+
+<script src="https://cdn.jsdelivr.net/npm/openseadragon@4.1.1/build/openseadragon/openseadragon.js"></script>
+<script type="module" src="https://episphere.github.io/GeoTIFFTileSource-JPEG2k/GeoTIFFTileSource.js"></script>
+<!-- <script type="module" src="http://localhost:5502/GeoTIFFTileSource.js"></script> -->
+<script type="module" src="index.js"></script>
 
 </html>

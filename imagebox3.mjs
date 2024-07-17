@@ -1,6 +1,7 @@
 // DO NOT USE THIS FILE IN SERVICE WORKERS. USE imagebox3.js INSTEAD.
 
 import { fromBlob, fromUrl, Pool, getDecoder, globals } from "https://cdn.jsdelivr.net/npm/geotiff@2.1.2/+esm"
+// import { fromBlob, fromUrl, Pool, getDecoder, globals } from "./geotiff.js"
 
 class Imagebox3 {
   constructor(imageSource, numWorkers) {
@@ -18,9 +19,11 @@ class Imagebox3 {
 
   async init() {
     this.tiff = await getImagePyramid(this.imageSource, true)
-    const imagesInPyramid = await getAllImagesInPyramid(this.tiff)
+    this.tiff.allImages = await getAllImagesInPyramid(this.tiff)
+    this.tiff.imageSets = await getImageSetsInPyramid(this.tiff)
+    this.tiff.slideImages = await getSlideImagesInPyramid(this.tiff)
 
-    const { width: maxWidth, height: maxHeight } = imagesInPyramid.reduce((largestImageDimensions, image) => {
+    const { width: maxWidth, height: maxHeight } = this.tiff.slideImages.reduce((largestImageDimensions, image) => {
       if (largestImageDimensions.width < image.getWidth() && largestImageDimensions.height < image.getHeight()) {
         largestImageDimensions.width = image.getWidth()
         largestImageDimensions.height = image.getHeight()
@@ -40,6 +43,9 @@ class Imagebox3 {
   }
 
   async changeImageSource(newImageSource) {
+    // USE INSTEAD OF RE-INSTANTIATING IMAGEBOX3 FOR EACH NEW IMAGE TO AVOID SPAWNING A NEW WORKER POOL EVERY TIME!!!
+    // IT IS NECESSARY TO HAVE THE WORKER POOL CREATION BE TIED TO THE INSTANTIATION BECAUSE COMPRESSION METHODS COULD BE DIFFERENT
+    // IN DIFFERENT IMAGES, MEANING THE SAME WORKER POOL MIGHT NOT BE REPURPOSEABLE. 
     this.imageSource = typeof (newImageSource) === 'string' ? decodeURIComponent(newImageSource) : newImageSource
     await this.init()
   }
@@ -59,6 +65,7 @@ class Imagebox3 {
   }
 
   destroyWorkerPool() {
+    // HIGHLY RECOMMENDED WHEN LOADING A NEW IMAGE!!! OTHERWISE EACH NEW INSTANTATION WILL CREATE A NEW WORKER POOL!!!!!
     destroyPool(this.workerPool)
   }
 
@@ -79,15 +86,19 @@ class Imagebox3 {
     return await getImageThumbnail(this.tiff, tileParams, this.workerPool)
   }
 
-  async getTile(topLeftX, topLeftY, tileWidthInImage, tileHeightInImage, tileSizeToRender) {
+  async getTile(topLeftX, topLeftY, tileWidthInImage, tileHeightInImage, tileResolutionToRender, imageIndex=-1) {
     const tileParams = {
       tileX: topLeftX,
       tileY: topLeftY,
       tileWidth: tileWidthInImage,
       tileHeight: tileHeightInImage,
-      tileSize: tileSizeToRender
+      tileResolution: tileResolutionToRender || Math.max(tileWidthInImage, tileHeightInImage),
     }
-    return await getImageTile(this.tiff, tileParams, this.workerPool)
+    return await getImageTile(this.tiff, tileParams, this.workerPool, imageIndex)
+  }
+
+  async getImageCount() {
+    return this.tiff?.ifdRequests?.length
   }
 
 }
@@ -117,7 +128,7 @@ const utils = {
     let imageWidthRatios = []
     // if (!tiffPyramid.imageWidthRatios) {
     //   tiffPyramid.imageWidthRatios = []
-      const slideImages = await getSlideImagesInPyramid(imagePyramid)
+      const slideImages = imagePyramid.slideImages || await getSlideImagesInPyramid(imagePyramid)
       for (let imageIndex = 0; imageIndex < slideImages.length; imageIndex++) {
         const imageWidth = slideImages[imageIndex].getWidth()
         const maxImageWidth = slideImages[0].getWidth()
@@ -155,11 +166,9 @@ const utils = {
     return slideImages[bestImageIndex]
   },
 
-  convertToImageBlob: async (data, width, height, imageFileDirectory) => {
-    // TODO: Write Node.js module to convert to image
-
-    // Converters copied from pearcetm/GeoTIFFTileSource
-    const Converters = {
+  handleConversion: (data, imageFileDirectory) => {
+     // Converters copied from pearcetm/GeoTIFFTileSource
+     const Converters = {
       RGBAfromYCbCr: (input) => {
         const rgbaRaster = new Uint8ClampedArray(input.length * 4 / 3);
         let i, j;
@@ -187,7 +196,7 @@ const utils = {
         return rgbaRaster;
       },
       RGBAfromWhiteIsZero: (input, max) => {
-        const rgbaRaster = new Uint8Array(input.length * 4);
+        const rgbaRaster = new Uint8ClampedArray(input.length * 4);
         let value;
         for (let i = 0, j = 0; i < input.length; ++i, j += 3) {
           value = 256 - (input[i] / max * 256);
@@ -199,7 +208,7 @@ const utils = {
         return rgbaRaster;
       },
       RGBAfromBlackIsZero: (input, max) => {
-        const rgbaRaster = new Uint8Array(input.length * 4);
+        const rgbaRaster = new Uint8ClampedArray(input.length * 4);
         let value;
         for (let i = 0, j = 0; i < input.length; ++i, j += 3) {
           value = input[i] / max * 256;
@@ -211,7 +220,7 @@ const utils = {
         return rgbaRaster;
       },
       RGBAfromPalette: (input, colorMap) => {
-        const rgbaRaster = new Uint8Array(input.length * 4);
+        const rgbaRaster = new Uint8ClampedArray(input.length * 4);
         const greenOffset = colorMap.length / 3;
         const blueOffset = colorMap.length / 3 * 2;
         for (let i = 0, j = 0; i < input.length; ++i, j += 3) {
@@ -224,7 +233,7 @@ const utils = {
         return rgbaRaster;
       },
       RGBAfromCMYK: (input) => {
-        const rgbaRaster = new Uint8Array(input.length);
+        const rgbaRaster = new Uint8ClampedArray(input.length);
         for (let i = 0, j = 0; i < input.length; i += 4, j += 4) {
           const c = input[i];
           const m = input[i + 1];
@@ -243,7 +252,7 @@ const utils = {
         const Xn = 0.95047;
         const Yn = 1.00000;
         const Zn = 1.08883;
-        const rgbaRaster = new Uint8Array(input.length * 4 / 3);
+        const rgbaRaster = new Uint8ClampedArray(input.length * 4 / 3);
 
         for (let i = 0, j = 0; i < input.length; i += 3, j += 4) {
           const L = input[i + 0];
@@ -288,6 +297,7 @@ const utils = {
 
       case globals.photometricInterpretations.BlackIsZero:  // grayscale, white is zero
         imageData = Converters.RGBAfromBlackIsZero(data, 2 ** imageFileDirectory.BitsPerSample[0]);
+
         break;
 
       case globals.photometricInterpretations.RGB:  // RGB
@@ -313,6 +323,13 @@ const utils = {
         imageData = Converters.RGBAfromCIELab(data);
         break;
     }
+    return imageData
+  },
+
+  convertToImageBlob: async (data, width, height, imageFileDirectory) => {
+    // TODO: Write Node.js module to convert to image
+
+    const imageData = await utils.handleConversion(data, imageFileDirectory)
 
     const cv = new OffscreenCanvas(width, height) // Use OffscreenCanvas so it works in workers as well.
     const ctx = cv.getContext("2d")
@@ -337,9 +354,10 @@ export const getImagePyramid = async (imageSource, cache = true) => {
   let tiffPyramid
 
   try {
-    const headers = cache ? { headers: { 'Cache-Control': "no-cache, no-store" } } : {}
+    const headers = cache === false ? { headers: { 'Cache-Control': "no-cache, no-store" } } : {}
     tiffPyramid = tiffPyramid || (imageSource instanceof File ? await fromBlob(imageSource) : await fromUrl(imageSource, headers))
-  } catch (e) {
+  }
+  catch (e) {
     console.error("Couldn't get images", e)
     if (cache) { // Retry in case Cache-Control is not part of Access-Control-Allow-Headers in preflight response
       return await getImagePyramid(imageSource, !cache)
@@ -365,22 +383,24 @@ export const getAllImagesInPyramid = async (imagePyramid) => {
   return resolvedImages
 }
 
-export const getSlideImagesInPyramid = async (imagePyramid) => {
-  // Get all images in the pyramid corresponding to the whole slide image. Filter out any meta-images or those with transparent masks.
+export const getImageSetsInPyramid = async (imagePyramid) => {
+  // Get all sets of images in the pyramid, based on aspect ratio differences. For instance, there could be a set of images at different
+  // resolutions corresponding to the whole slide image, another set corresponding to a meta-image and so on.
 
   if (typeof (imagePyramid?.ifdRequests) !== 'object') {
     throw new Error("Malformed image pyramid. Please retry pyramid creation using the `getImagePyramid()` method.")
   }
 
-  const allImages = await getAllImagesInPyramid(imagePyramid)
-
-  const aspectRatioTolerance = 0.01
-  const validImageSets = allImages
+  const allImages = imagePyramid.allImages || await getAllImagesInPyramid(imagePyramid)
+  
+  const ASPECT_RATIO_TOLERANCE = 0.01
+  
+  const imageSets = allImages
     .filter(image => image.fileDirectory.photometricInterpretation !== globals.photometricInterpretations.TransparencyMask)
     .sort((image1, image2) => image2.getWidth() - image1.getWidth())
     .reduce((sets, image) => {
       const aspectRatio = image.getWidth() / image.getHeight()
-      const aspectRatioSetIndex = sets.findIndex(set => Math.abs(set[0].getWidth() / set[0].getHeight() - aspectRatio) < aspectRatioTolerance)
+      const aspectRatioSetIndex = sets.findIndex(set => Math.abs(set[0].getWidth() / set[0].getHeight() - aspectRatio) < ASPECT_RATIO_TOLERANCE)
       if (aspectRatioSetIndex !== -1) {
         sets[aspectRatioSetIndex].push(image)
       } else {
@@ -389,11 +409,23 @@ export const getSlideImagesInPyramid = async (imagePyramid) => {
       return sets
     }, [])
 
-  const bestSet = validImageSets.reduce((largestSet, set) => {
-    if (largestSet.length < set.length || (largestSet.length === set.length && largestSet[0].getWidth() < set[0].getWidth())) {
-      largestSet = set
+    return imageSets
+}
+
+export const getSlideImagesInPyramid = async (imagePyramid) => {
+  // Get all images in the pyramid corresponding to the whole slide image. Filter out any meta-images or those with transparent masks.
+
+  if (typeof (imagePyramid?.ifdRequests) !== 'object') {
+    throw new Error("Malformed image pyramid. Please retry pyramid creation using the `getImagePyramid()` method.")
+  }
+
+  const imageSets = imagePyramid.imageSets || await getImageSetsInPyramid(imagePyramid)
+
+  const bestSet = imageSets.reduce((largestImageSet, set) => {
+    if (largestImageSet.length === 0 || largestImageSet[0].getWidth() < set[0].getWidth() || (largestImageSet[0].getWidth() === set[0].getWidth() && largestImageSet.length < set.length)) {
+      largestImageSet = set
     }
-    return largestSet
+    return largestImageSet
   }, [])
 
   return bestSet
@@ -407,7 +439,7 @@ export const getImageInfo = async (imagePyramid) => {
     throw new Error("Malformed image pyramid. Please retry pyramid creation using the `getImagePyramid()` method.")
   }
   
-  const slideImages = await getSlideImagesInPyramid(imagePyramid)
+  const slideImages = imagePyramid.slideImages || await getSlideImagesInPyramid(imagePyramid)
   const largestImage = slideImages[0]
   
   let pixelsPerMeter = undefined
@@ -465,7 +497,7 @@ export const getImageThumbnail = async (imagePyramid, tileParams, pool) => {
 
 }
 
-export const getImageTile = async (imagePyramid, tileParams, pool) => {
+export const getImageTile = async (imagePyramid, tileParams, pool, imageIndex=-1) => {
   // Get individual tiles from the appropriate image in the pyramid.
 
   if (typeof (imagePyramid?.ifdRequests) !== 'object') {
@@ -473,25 +505,37 @@ export const getImageTile = async (imagePyramid, tileParams, pool) => {
   }
 
   const parsedTileParams = utils.parseTileParams(tileParams)
-  const { tileX, tileY, tileWidth, tileHeight, tileSize } = parsedTileParams
+  let { tileX, tileY, tileWidth, tileHeight, tileSize, tileResolution } = parsedTileParams
 
-  if (!Number.isInteger(tileX) || !Number.isInteger(tileY) || !Number.isInteger(tileWidth) || !Number.isInteger(tileHeight) || !Number.isInteger(tileSize)) {
-    console.error("Tile Request missing critical parameters!", tileX, tileY, tileWidth, tileHeight, tileSize)
+  if (!Number.isInteger(tileX) || !Number.isInteger(tileY) || !Number.isInteger(tileWidth) || !Number.isInteger(tileHeight)) {
+    console.error("Tile Request missing critical parameters!", tileX, tileY, tileWidth, tileHeight)
     return
   }
-
-  const optimalImageInTiff = await utils.getImageByRatio(imagePyramid, tileWidth, tileSize)
+  if (!Number.isInteger(tileSize) && !Number.isInteger(tileResolution)) {
+    tileResolution = Math.max(tileWidth, tileHeight)
+  }
+  tileResolution = tileResolution || tileSize // To ensure backward compatibility.
+  
+  let optimalImageInTiff = undefined
+  if(imageIndex >= 0 && imageIndex < imagePyramid.slideImages.length) {
+    optimalImageInTiff = imagePyramid.slideImages[imageIndex]
+  } else {
+    optimalImageInTiff = await utils.getImageByRatio(imagePyramid, tileWidth, tileResolution)
+  }
+  if (Array.isArray(optimalImageInTiff.fileDirectory["SampleFormat"]) && optimalImageInTiff.fileDirectory["SampleFormat"].length !== optimalImageInTiff.fileDirectory["BitsPerSample"].length) {
+    optimalImageInTiff.fileDirectory["SampleFormat"] = Array(optimalImageInTiff.fileDirectory["BitsPerSample"].length).fill(optimalImageInTiff.fileDirectory["SampleFormat"][0])
+  }
 
   const optimalImageWidth = optimalImageInTiff.getWidth()
   const optimalImageHeight = optimalImageInTiff.getHeight()
   
   let tileWidthToRender, tileHeightToRender
   if (tileWidth > tileHeight) {
-    tileHeightToRender = Math.floor(tileHeight * tileSize / tileWidth)
-    tileWidthToRender = tileSize
+    tileHeightToRender = Math.floor(tileHeight * tileResolution / tileWidth)
+    tileWidthToRender = tileResolution
   } else {
-    tileWidthToRender = Math.floor(tileWidth * tileSize/tileHeight)
-    tileHeightToRender = tileSize
+    tileWidthToRender = Math.floor(tileWidth * tileResolution / tileHeight)
+    tileHeightToRender = tileResolution
   }
 
   const { maxWidth, maxHeight } = imagePyramid
