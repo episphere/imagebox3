@@ -91,7 +91,7 @@ $.modifyHashString = (hashObj, removeFromHistory = true) => {
     let hash = window.location.hash + ""
 
     Object.entries(hashObj).forEach(([key, val]) => {
-        if (val && val !== $.hashParams[key]) {
+        if (typeof(val) !== 'undefined' && val !== $.hashParams[key]) {
 
             if ($.hashParams[key]) {
                 hash = hash.replace(`${key}=${encodeURIComponent($.hashParams[key])}`, `${key}=${encodeURIComponent(val)}`)
@@ -103,7 +103,7 @@ $.modifyHashString = (hashObj, removeFromHistory = true) => {
 
         }
 
-        else if (!val) {
+        else if (typeof(val) === 'undefined') {
             const param = `${key}=${encodeURIComponent($.hashParams[key])}`
             const paramIndex = hash.indexOf(param)
 
@@ -335,17 +335,17 @@ $.loadDefaultImage = async () => {
 }
 
 $.cleanTileParams = (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
-    tileX = !Number.isNaN(Math.round(tileX)) ? Math.round(tileX) : (!Number.isNaN(Math.round($.hashParams['tileX'])) ? Math.round($.hashParams['tileX']) : Math.floor(($.imageBoxInstance.tiff.maxWidth - tileWidth) / 2))
-    tileY = !Number.isNaN(Math.round(tileY)) ? Math.round(tileY) : (!Number.isNaN(Math.round($.hashParams['tileY'])) ? Math.round($.hashParams['tileY']) : Math.floor(($.imageBoxInstance.tiff.maxWidth - tileWidth) / 2))
-    tileWidth = Math.round(tileWidth) || Math.round($.hashParams['tileWidth']) || ($.imageBoxInstance.tiff.maxWidth >= 2048 ? 2048 : $.imageBoxInstance.tiff.maxWidth)
-    tileHeight = Math.round(tileHeight) || Math.round($.hashParams['tileHeight']) || ($.imageBoxInstance.tiff.maxWidth >= 2048 ? 2048 : $.imageBoxInstance.tiff.maxWidth)
+    tileWidth = Math.round(tileWidth) || Math.round($.hashParams['tileWidth']) || ($.imageBoxInstance.tiff.maxWidth >= 4096 ? 4096 : $.imageBoxInstance.tiff.maxWidth)
+    tileHeight = Math.round(tileHeight) || Math.round($.hashParams['tileHeight']) || ($.imageBoxInstance.tiff.maxWidth >= 4096 ? 4096 : $.imageBoxInstance.tiff.maxWidth)
     
-    tileWidth = tileWidth > 0 && tileWidth <= $.imageBoxInstance.tiff.maxWidth ? tileWidth : ($.imageBoxInstance.tiff.maxWidth >= 2048 ? 2048 : $.imageBoxInstance.tiff.maxWidth)
-    tileHeight = tileWidth > 0 && tileHeight <= $.imageBoxInstance.tiff.maxHeight ? tileHeight : ($.imageBoxInstance.tiff.maxWidth >= 2048 ? 2048 : $.imageBoxInstance.tiff.maxWidth)
-
+    tileWidth = tileWidth > 0 && tileWidth <= $.imageBoxInstance.tiff.maxWidth ? tileWidth : ($.imageBoxInstance.tiff.maxWidth >= 4096 ? 4096 : $.imageBoxInstance.tiff.maxWidth)
+    tileHeight = tileWidth > 0 && tileHeight <= $.imageBoxInstance.tiff.maxHeight ? tileHeight : ($.imageBoxInstance.tiff.maxWidth >= 4096 ? 4096 : $.imageBoxInstance.tiff.maxWidth)
+    
+    tileX = !isNaN(Math.round(tileX)) ? Math.round(tileX) : (!isNaN(Math.round($.hashParams['tileX'])) ? Math.round($.hashParams['tileX']) : Math.floor(($.imageBoxInstance.tiff.maxWidth - tileWidth) / 2))
     tileX = tileX >= 0 ? tileX : 0
     tileX = (tileX + tileWidth <= $.imageBoxInstance.tiff.maxWidth) ? tileX : Math.floor($.imageBoxInstance.tiff.maxWidth - tileWidth)
-
+    
+    tileY = !isNaN(Math.round(tileY)) ? Math.round(tileY) : (!isNaN(Math.round($.hashParams['tileY'])) ? Math.round($.hashParams['tileY']) : Math.floor(($.imageBoxInstance.tiff.maxWidth - tileWidth) / 2))
     tileY = tileY >= 0 ? tileY : 0
     tileY = (tileY + tileHeight <= $.imageBoxInstance.tiff.maxHeight) ? tileY : Math.floor($.imageBoxInstance.tiff.maxHeight - tileHeight)
 
@@ -359,11 +359,11 @@ $.cleanTileParams = (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
 $.updateTileParams = (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
     let didUpdateTileParams = false
     
-    tileX = !Number.isNaN(tileX) ? Math.round(tileX) : undefined
-    tileY = !Number.isNaN(tileY) ? Math.round(tileY) : undefined
-    tileWidth = !Number.isNaN(tileWidth) ? Math.round(tileWidth) : undefined
-    tileHeight = !Number.isNaN(tileHeight) ? Math.round(tileHeight) : undefined
-    tileResolution = !Number.isNaN(tileResolution) ? Math.round(tileResolution) : undefined
+    tileX = !isNaN(tileX) ? Math.round(tileX) : undefined
+    tileY = !isNaN(tileY) ? Math.round(tileY) : undefined
+    tileWidth = !isNaN(tileWidth) ? Math.round(tileWidth) : undefined
+    tileHeight = !isNaN(tileHeight) ? Math.round(tileHeight) : undefined
+    tileResolution = !isNaN(tileResolution) ? Math.round(tileResolution) : undefined
 
     const tileWidthInputElement = document.getElementById("tileWidth")
     if (typeof(tileWidth) !== 'undefined' && tileWidthInputElement.value !== tileWidth) {
@@ -406,90 +406,92 @@ $.updateTileParams = (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
 
 $.loadTileOverlay = ({ tileX, tileY, tileWidth, tileHeight, tileResolution }) => {
 
-    const cleanedTileParams = $.cleanTileParams(tileX, tileY, tileWidth, tileHeight, tileResolution)
-    const didUpdatetileParams = $.updateTileParams(...Object.values(cleanedTileParams))
-    
-    if(didUpdatetileParams || $.viewer.currentOverlays.length === 0) {
-        const createOverlay = () => {
-            const tileOverlay = document.createElement("div")
-            tileOverlay.id = "tileOverlay"
-            tileOverlay.className = "border border-2 border-dashed border-lime-400 cursor-grab shadow-2xl"
-            
-            Object.entries(cleanedTileParams).forEach(([key, val]) => {
-                tileOverlay.setAttribute(`data-${key}`, val)
-            })
-    
-            const overlayBounds = $.viewer.world.getItemAt(0).imageToViewportRectangle(...Object.values(cleanedTileParams).slice(0, -1))
-            
-            if ($.viewer.currentOverlays.length > 0) {
-                $.viewer.currentOverlays.forEach(overlay => $.viewer.removeOverlay(overlay.element))
-            }
-
-            $.viewer.addOverlay({
-                element: tileOverlay,
-                location: overlayBounds
-            })
-            
-            new OpenSeadragon.MouseTracker({
-                element: tileOverlay,
-                clickTimeThreshold: 200,
-                clickDistThreshold: 50,
-                preProcessEventHandler: (e) => {
-                    if (e.eventType === "drag" || e.eventType === "dragEnd") {
-                        e.stopPropagation = true;
-                        e.preventDefault = true;
-                    }
-                },
-                dragHandler: (e) => {
-                    const overlay = $.viewer.getOverlayById(tileOverlay);
-                    const deltaViewport = $.viewer.viewport.deltaPointsFromPixels(
-                        e.delta
-                    );
-    
-                    overlay.element.style.cursor = "grabbing";
-                    
-                    const checkIfInsideBounds = () => {
-                        const potentialNewOverlayLocation = overlay.location.plus(deltaViewport)
-                        const potentialNewOverlayBounds = $.viewer.viewport.viewportToImageRectangle(potentialNewOverlayLocation.x, potentialNewOverlayLocation.y, overlay.bounds.width, overlay.bounds.height)
-                        return Math.round(potentialNewOverlayBounds.x) >=0 && Math.round(potentialNewOverlayBounds.y) >= 0 && Math.round(potentialNewOverlayBounds.x + potentialNewOverlayBounds.width) <= $.imageBoxInstance.tiff.maxWidth && Math.round(potentialNewOverlayBounds.y + potentialNewOverlayBounds.height) <= $.imageBoxInstance.tiff.maxHeight
-                    }
-                    
-                    if (checkIfInsideBounds()) {
-                        overlay.update(overlay.location.plus(deltaViewport));
-                        overlay.drawHTML(overlay.element.parentElement, $.viewer.viewport);
-                    }
-                },
-                dragEndHandler: () => {
-                    const overlay = $.viewer.getOverlayById(tileOverlay);
-                    overlay.element.style.cursor = "grab";
-                    const {x: tileX, y: tileY, width: tileWidth, height: tileHeight} = $.viewer.world.getItemAt(0).viewportToImageRectangle(overlay.bounds)
-                    $.updateTileParams(tileX, tileY, tileWidth, tileHeight, tileResolution)
-                    $.loadTile(tileX, tileY, tileWidth, tileHeight, tileResolution)
+    if (!$.viewer?.world?.getItemAt(0)?.getFullyLoaded()) {
+        document.body.addEventListener("imageFullyLoaded", () => {
+            $.loadTileOverlay({ tileX, tileY, tileWidth, tileHeight, tileResolution })
+        }, { once: true })
+    } else {
+        const cleanedTileParams = $.cleanTileParams(tileX, tileY, tileWidth, tileHeight, tileResolution)
+        const didUpdatetileParams = $.updateTileParams(...Object.values(cleanedTileParams))
+        
+        if(didUpdatetileParams || $.viewer.currentOverlays.length === 0) {
+            const createOverlay = () => {
+                const tileOverlay = document.createElement("div")
+                tileOverlay.id = "tileOverlay"
+                tileOverlay.className = "border border-2 border-dashed border-lime-400 cursor-grab shadow-2xl"
+                
+                Object.entries(cleanedTileParams).forEach(([key, val]) => {
+                    tileOverlay.setAttribute(`data-${key}`, val)
+                })
+        
+                const overlayBounds = $.viewer.world.getItemAt(0).imageToViewportRectangle(...Object.values(cleanedTileParams).slice(0, -1))
+                
+                if ($.viewer.currentOverlays.length > 0) {
+                    $.viewer.currentOverlays.forEach(overlay => $.viewer.removeOverlay(overlay.element))
                 }
-            })
-            
-        }
-
-        const previousOverlay = $.viewer.currentOverlays[0]
-
-        if (previousOverlay) {
-            const previousOverlayLocation = $.viewer.world.getItemAt(0).viewportToImageRectangle(previousOverlay.bounds)
+    
+                $.viewer.addOverlay({
+                    element: tileOverlay,
+                    location: overlayBounds
+                })
+                
+                new OpenSeadragon.MouseTracker({
+                    element: tileOverlay,
+                    clickTimeThreshold: 200,
+                    clickDistThreshold: 50,
+    
+                    preProcessEventHandler: (e) => {
+                        if (e.eventType === "drag" || e.eventType === "dragEnd") {
+                            e.stopPropagation = true;
+                            e.preventDefault = true;
+                        }
+                    },
+    
+                    dragHandler: (e) => {
+                        const overlay = $.viewer.getOverlayById(tileOverlay);
+                        const deltaViewport = $.viewer.viewport.deltaPointsFromPixels(
+                            e.delta
+                        );
         
-            if (Math.round(previousOverlayLocation.x) !== tileX || Math.round(previousOverlayLocation.y) !== tileY || Math.round(previousOverlayLocation.width) !== tileWidth || Math.round(previousOverlayLocation.height) !== tileHeight || Math.round(previousOverlay.element.getAttribute("data-tileResolution")) !== tileResolution) {
-                previousOverlay.destroy()
-                $.viewer.currentOverlays.shift()
+                        overlay.element.style.cursor = "grabbing";
+                        
+                        const checkIfInsideBounds = () => {
+                            const potentialNewOverlayLocation = overlay.location.plus(deltaViewport)
+                            const potentialNewOverlayBounds = $.viewer.viewport.viewportToImageRectangle(potentialNewOverlayLocation.x, potentialNewOverlayLocation.y, overlay.bounds.width, overlay.bounds.height)
+                            return Math.round(potentialNewOverlayBounds.x) >=0 && Math.round(potentialNewOverlayBounds.y) >= 0 && Math.round(potentialNewOverlayBounds.x + potentialNewOverlayBounds.width) <= $.imageBoxInstance.tiff.maxWidth && Math.round(potentialNewOverlayBounds.y + potentialNewOverlayBounds.height) <= $.imageBoxInstance.tiff.maxHeight
+                        }
+                        
+                        if (checkIfInsideBounds()) {
+                            overlay.update(overlay.location.plus(deltaViewport));
+                            overlay.drawHTML(overlay.element.parentElement, $.viewer.viewport);
+                        }
+                    },
+    
+                    dragEndHandler: () => {
+                        const overlay = $.viewer.getOverlayById(tileOverlay);
+                        overlay.element.style.cursor = "grab";
+                        const {x: tileX, y: tileY, width: tileWidth, height: tileHeight} = $.viewer.world.getItemAt(0).viewportToImageRectangle(overlay.bounds)
+                        $.updateTileParams(tileX, tileY, tileWidth, tileHeight, Math.round($.hashParams['tileResolution']))
+                        $.loadTile(tileX, tileY, tileWidth, tileHeight, Math.round($.hashParams['tileResolution']))
+                    }
+                })
+                
             }
-        }
-        
-        if (!$.viewer?.world?.getItemAt(0)?.getFullyLoaded()) {
-            document.body.addEventListener("imageFullyLoaded", () => {
-                createOverlay()
-                $.loadTile(...Object.values(cleanedTileParams))
-            }, { once: true })
-        }
-        else {
+    
+            const previousOverlay = $.viewer.currentOverlays[0]
+    
+            if (previousOverlay) {
+                const previousOverlayLocation = $.viewer.world.getItemAt(0).viewportToImageRectangle(previousOverlay.bounds)
+            
+                if (Math.round(previousOverlayLocation.x) !== tileX || Math.round(previousOverlayLocation.y) !== tileY || Math.round(previousOverlayLocation.width) !== tileWidth || Math.round(previousOverlayLocation.height) !== tileHeight || Math.round(previousOverlay.element.getAttribute("data-tileResolution")) !== tileResolution) {
+                    previousOverlay.destroy()
+                    $.viewer.currentOverlays.shift()
+                }
+            }
+            
             createOverlay()
             $.loadTile(...Object.values(cleanedTileParams))
+
         }
     }
 }
