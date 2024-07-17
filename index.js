@@ -420,6 +420,11 @@ $.loadTileOverlay = ({ tileX, tileY, tileWidth, tileHeight, tileResolution }) =>
             })
     
             const overlayBounds = $.viewer.world.getItemAt(0).imageToViewportRectangle(...Object.values(cleanedTileParams).slice(0, -1))
+            
+            if ($.viewer.currentOverlays.length > 0) {
+                $.viewer.currentOverlays.forEach(overlay => $.viewer.removeOverlay(overlay.element))
+            }
+
             $.viewer.addOverlay({
                 element: tileOverlay,
                 location: overlayBounds
