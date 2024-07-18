@@ -31,9 +31,9 @@
         </div>
         <hr/>
         <div class="w-full py-2">
-            <p class="text-gray-700 pb-1">ImageBox3 is an in-browser mechanism for zero-footprint patch extraction from TIFF-based Whole Slide Imaging (WSI) data. No (server-side) tiling service needed!</p>
-            <p class="text-gray-700 pb-1">All computation is being performed on your device, thus ensuring complete user governance while operating public and private images alike.</p>
-            <p class="text-gray-700 pb-1">ImageBox3 is freely usable and immediately portable to any device with a web browser. Try it below:</p>
+            <p class="min-w-screen max-w-7xl pb-1 text-gray-700 text-justify">ImageBox3 is a JavaScript library for zero-footprint, in-browser patch extraction from TIFF-based Whole Slide Imaging (WSI) data. No (server-side) tiling service needed! 
+                All computation is performed on your device using HTTP Range Requests to retrieve remote patches without downloading the entire image, thus ensuring complete user governance while operating public and private images alike. 
+                ImageBox3 is freely usable and immediately portable to any device with a web browser. Try it below:</p>
             <p class="text-gray-700">(The viewer on the left uses <a href="https://openseadragon.github.io/" class="cursor-pointer text-indigo-600 underline">OpenSeadragon</a> + <a href="https://github.com/episphere/GeoTIFFTileSource-JPEG2k" class="cursor-pointer text-indigo-600 underline">a fork</a> of the <a href="https://github.com/pearcetm/GeoTIFFTileSource" class="cursor-pointer text-indigo-600 underline">GeoTIFFTileSource plugin</a>.)</p>
         </div>
         <hr/>
@@ -174,48 +174,50 @@
                     <span class="text-sm italic text-gray-800">(Try moving the green box on the left to view a different patch.)</span>
                 </div>
 
-                <div id="imageParams" class="w-full h-max grid grid-cols-2 gap-x-4">
+                <div id="imageParams" class="w-full h-max grid grid-flow-row gap-y-2">
 
-                    <div>
+                    <div class="w-full grid grid-cols-3 gap-x-2">
                         <label for="tileX">X coordinate: </label>
                         <input type="number" id="tileX" min="0"
-                            class="w-32 inline flex-initial mt-2 pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
-                    </div>
-                    
-                    <div>
+                            class="w-32 inline flex-initial pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                        <input type="range" id="tileXRange" min="128" max="4096">
+                    </div>    
+                    <div class="w-full grid grid-cols-3 gap-x-2">
                         <label for="tileY">Y coordinate: </label>
                         <input type="number" id="tileY" min="0"
-                            class="w-32 inline flex-initial mt-2 pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                            class="w-32 inline flex-initial pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                        <input type="range" id="tileYRange" min="128" max="4096">
                     </div>
-                    
-                    <div>
+                    <div class="w-full grid grid-cols-3 gap-x-2">
                         <label for="tileWidth">Region Width: </label>
-                        <input type="number" id="tileWidth" min="128" max="4096"
-                            class="w-32 inline flex-initial mt-2 pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                        <input type="number" id="tileWidth" min="128" max="46000"
+                            class="w-32 inline flex-initial pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                        <input type="range" id="tileWidthRange" min="128" max="4096">
                     </div>
-                    
-                    <div>
-                        <label for="tileHeigh">Region Height: </label>
+                    <div class="w-full grid grid-cols-3 gap-x-2">
+                        <label for="tileHeight">Region Height: </label>
                         <input type="number" id="tileHeight" min="128" max="4096"
-                            class="w-32 inline flex-initial mt-2 pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                            class="w-32 inline flex-initial pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
+                        <input type="range" id="tileHeightRange" min="128" max="4096">
                     </div>
                     
-                    <div class="col-span-2">
+                    <div class="w-full">
                         <label for="tileResolution">Tile Resolution: </label>
                         <input type="number" id="tileResolution" min="0" max="4096"
                             class="w-32 inline flex-initial mt-2 pl-3 text-gray-900 border border-solid border-gray-300 rounded-sm placeholder:text-gray-400 sm:text-sm sm:leading-6">
-                        x <span id="tileResCopy"
+                        <span> x </span>
+                        <span id="tileResCopy"
                             class="inline flex-initial py-1 text-gray-900 rounded-sm sm:text-sm sm:leading-6"></span>
-                        px
+                        <span>px</span>
                     </div>
                     <!-- <label>Image Height: </label>
                         <input type="number" id="imageH" value="256" placeholder="256" min="0"> -->
-                </div>
-                <div class="w-full h-max grid grid-cols-2 gap-x-2">
-                    <button id="copyTileURL"
+                    <div class="w-full h-max grid grid-cols-2 gap-x-2">
+                        <button id="copyTileURL"
                         class="flex flex-row w-full flex-none justify-center rounded-md bg-indigo-600 mt-2 p-2 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 active:bg-indigo-800 transition-colors">Copy URL</button>
-                    <button id="downloadTile"
+                        <button id="downloadTile"
                         class="flex flex-row w-full flex-none justify-center rounded-md bg-indigo-600 mt-2 p-2 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 active:bg-indigo-800">Download Tile</button>
+                    </div>
                 </div>
             </div>
 

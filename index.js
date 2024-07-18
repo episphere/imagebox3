@@ -366,29 +366,36 @@ $.updateTileParams = (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
     tileResolution = !isNaN(tileResolution) ? Math.round(tileResolution) : undefined
 
     const tileWidthInputElement = document.getElementById("tileWidth")
+    const tileWidthRangeElement = document.getElementById("tileWidthRange")
     if (typeof(tileWidth) !== 'undefined' && tileWidthInputElement.value !== tileWidth) {
         tileWidthInputElement.value = tileWidth
+        tileWidthRangeElement.value = tileWidth
     }
 
     const tileHeightInputElement = document.getElementById("tileHeight")
+    const tileHeightRangeElement = document.getElementById("tileHeightRange")
     if (typeof(tileHeight) !== 'undefined' && tileHeightInputElement.value !== tileHeight) {
         tileHeightInputElement.value = tileHeight
+        tileHeightRangeElement.value = tileHeight
     }
 
     const tileXInputElement = document.getElementById("tileX")
+    const tileXRangeElement = document.getElementById("tileXRange")
     if (typeof(tileX) !== 'undefined' && tileXInputElement.value !== tileX) {
         tileXInputElement.value = tileX
+        tileXRangeElement.value = tileX
     }
 
     const tileYInputElement = document.getElementById("tileY")
+    const tileYRangeElement = document.getElementById("tileYRange")
     if (typeof(tileY) !== 'undefined' && tileYInputElement.value !== tileY) {
         tileYInputElement.value = tileY
+        tileYRangeElement.value = tileY
     }
 
     const tileResolutionInputElement = document.getElementById("tileResolution")
     if (typeof(tileResolution) !== 'undefined' && tileResolutionInputElement.value !== tileResolution) {
         tileResolutionInputElement.value = tileResolution
-        tileResolutionInputElement.nextElementSibling.innerText = tileResolution
     }
     
     if (tileWidth !== Math.round($.hashParams['tileWidth']) || tileHeight !== Math.round($.hashParams['tileHeight']) || tileX !== Math.round($.hashParams['tileX']) || tileY !== Math.round($.hashParams['tileY']) || tileResolution !== Math.round($.hashParams['tileResolution'])) {
@@ -404,7 +411,7 @@ $.updateTileParams = (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
     return didUpdateTileParams
 }
 
-$.loadTileOverlay = ({ tileX, tileY, tileWidth, tileHeight, tileResolution }) => {
+$.loadTileOverlay = ({ tileX, tileY, tileWidth, tileHeight, tileResolution }, overlayOnly=false) => {
 
     if (!$.viewer?.world?.getItemAt(0)?.getFullyLoaded()) {
         document.body.addEventListener("imageFullyLoaded", () => {
@@ -412,9 +419,9 @@ $.loadTileOverlay = ({ tileX, tileY, tileWidth, tileHeight, tileResolution }) =>
         }, { once: true })
     } else {
         const cleanedTileParams = $.cleanTileParams(tileX, tileY, tileWidth, tileHeight, tileResolution)
-        const didUpdatetileParams = $.updateTileParams(...Object.values(cleanedTileParams))
+        const didUpdateTileParams = $.updateTileParams(...Object.values(cleanedTileParams))
         
-        if(didUpdatetileParams || $.viewer.currentOverlays.length === 0) {
+        if(didUpdateTileParams || $.viewer.currentOverlays.length === 0) {
             const createOverlay = () => {
                 const tileOverlay = document.createElement("div")
                 tileOverlay.id = "tileOverlay"
@@ -490,7 +497,9 @@ $.loadTileOverlay = ({ tileX, tileY, tileWidth, tileHeight, tileResolution }) =>
             }
             
             createOverlay()
-            $.loadTile(...Object.values(cleanedTileParams))
+            if (!overlayOnly) {
+                $.loadTile(...Object.values(cleanedTileParams))
+            }
 
         }
     }
@@ -545,53 +554,92 @@ const setupEventListeners = () => {
     })
 
     const tileParamElementIDs = ['tileX', 'tileY', 'tileWidth', 'tileHeight', 'tileResolution']
-    tileParamElementIDs.forEach(elementId => {
+    const tileParamRangeElementIDs = ['tileXRange', 'tileYRange', 'tileWidthRange', 'tileHeightRange']
+    tileParamElementIDs.forEach((elementId, ind) => {
         const tileParamElement = document.getElementById(elementId)
-        tileParamElement.onchange = (e) => {
-            // console.log()
+        const tileParamRangeElement = ind < tileParamRangeElementIDs.length ? document.getElementById(tileParamRangeElementIDs[ind]) : undefined
+        
+        tileParamElement.onchange = (e, overlayOnly=false) => {
+            console.log("YO", overlayOnly)
             if (parseInt(e.target.value) < parseInt(e.target.getAttribute("min"))) {
                 e.target.value = e.target.getAttribute("min")
             }
             else if (parseInt(e.target.value) > parseInt(e.target.getAttribute("max"))) {
                 e.target.value = e.target.getAttribute("max")
             }
+            
+            tileParamElement.value = e.target.value
+            if (tileParamRangeElement) {
+                tileParamRangeElement.value = tileParamElement.value
+            }
+
             if (elementId === 'tileWidth') {
                 const tileX = document.getElementById(tileParamElementIDs[0])
-                if (parseInt(tileX.value) + parseInt(e.target.value) > $.imageBoxInstance.tiff.maxWidth) {
-                    tileX.value = $.imageBoxInstance.tiff.maxWidth - parseInt(e.target.value)
+                const tileXRange = document.getElementById(tileParamRangeElementIDs[0])
+                
+                if (parseInt(tileX.value) + parseInt(tileParamElement.value) > $.imageBoxInstance.tiff.maxWidth) {
+                    tileX.value = $.imageBoxInstance.tiff.maxWidth - parseInt(tileParamElement.value)
+                    tileXRange.value = tileXRange
                 }
-                tileX.setAttribute("max", $.imageBoxInstance.tiff.maxWidth - parseInt(e.target.value))
+                tileX.setAttribute("max", $.imageBoxInstance.tiff.maxWidth - parseInt(tileParamElement.value))
+                tileXRange.setAttribute("max", $.imageBoxInstance.tiff.maxWidth - parseInt(tileParamElement.value))
             }
             if (elementId === 'tileHeight') {
                 const tileY = document.getElementById(tileParamElementIDs[1])
-                if (parseInt(tileY.value) + parseInt(e.target.value) > $.imageBoxInstance.tiff.maxHeight) {
-                    tileY.value = $.imageBoxInstance.tiff.maxHeight - parseInt(e.target.value)
+                const tileYRange = document.getElementById(tileParamRangeElementIDs[1])
+                if (parseInt(tileY.value) + parseInt(tileParamElement.value) > $.imageBoxInstance.tiff.maxHeight) {
+                    tileY.value = $.imageBoxInstance.tiff.maxHeight - parseInt(tileParamElement.value)
+                    tileYRange.value = tileY.value
                 }
-                tileY.setAttribute("max", $.imageBoxInstance.tiff.maxHeight - parseInt(e.target.value))
+                tileY.setAttribute("max", $.imageBoxInstance.tiff.maxHeight - parseInt(tileParamElement.value))
+                tileYRange.setAttribute("max", $.imageBoxInstance.tiff.maxHeight - parseInt(tileParamElement.value))
             }
             
             $.loadTileOverlay(tileParamElementIDs.reduce((obj,eID) => {
                 obj[eID] = parseInt(document.getElementById(eID).value)
                 return obj
-            }, {}))
+            }, {}), overlayOnly)
             
             if (elementId === 'tileResolution') {
-                tileParamElement.nextElementSibling.innerText = e.target.value
+                tileParamElement.parentElement.querySelector("#tileResCopy").innerText = tileParamElement.value
+            }
+        }
+
+        if (tileParamRangeElement) {
+            tileParamRangeElement.oninput = (e) => tileParamElement.onchange(e, true)
+            tileParamRangeElement.onchange = (e) => {
+                $.loadTile(...tileParamElementIDs.map(eID => parseInt(document.getElementById(eID).value)))
             }
         }
     })
 
     document.body.addEventListener("imageFullyLoaded", (e) => {
         const tileX = document.getElementById("tileX")
+        const tileXRange = document.getElementById("tileXRange")
+        
         const tileY = document.getElementById("tileY")
+        const tileYRange = document.getElementById("tileYRange")
+        
         const tileWidth = document.getElementById("tileWidth")
+        const tileWidthRange = document.getElementById("tileWidthRange")
+        
         const tileHeight = document.getElementById("tileHeight")
+        const tileHeightRange = document.getElementById("tileHeightRange")
+        
         const tileResolution = document.getElementById("tileResolution")
 
         tileX.setAttribute("max", $.imageBoxInstance.tiff.maxWidth - (parseInt(tileWidth.value) || Math.round($.hashParams['tileWidth']) || 2048))
+        tileXRange.setAttribute("max", $.imageBoxInstance.tiff.maxWidth - (parseInt(tileWidth.value) || Math.round($.hashParams['tileWidth']) || 2048))
+
         tileY.setAttribute("max", $.imageBoxInstance.tiff.maxHeight - (parseInt(tileHeight.value) || Math.round($.hashParams['tileHeight']) || 2048))
-        tileWidth.setAttribute("max", $.imageBoxInstance.tiff.maxWidth)
-        tileHeight.setAttribute("max", $.imageBoxInstance.tiff.maxHeight)
+        tileYRange.setAttribute("max", $.imageBoxInstance.tiff.maxHeight - (parseInt(tileHeight.value) || Math.round($.hashParams['tileHeight']) || 2048))
+        
+        tileWidth.setAttribute("max", Math.min($.imageBoxInstance.tiff.maxWidth, 8192))
+        tileWidthRange.setAttribute("max", Math.min($.imageBoxInstance.tiff.maxWidth, 8192))
+        
+        tileHeight.setAttribute("max", Math.min($.imageBoxInstance.tiff.maxHeight, 8192))
+        tileHeightRange.setAttribute("max", Math.min($.imageBoxInstance.tiff.maxHeight, 8192))
+        
         tileResolution.setAttribute("max", 2048)
     })
     
