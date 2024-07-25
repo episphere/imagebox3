@@ -1,4 +1,32 @@
-import { fromBlob, fromUrl, Pool, getDecoder, globals } from "https://cdn.jsdelivr.net/npm/geotiff@2.1.2/+esm"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: imagebox3.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: imagebox3.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { fromBlob, fromUrl, Pool, getDecoder, globals } from "https://cdn.jsdelivr.net/npm/geotiff@2.1.2/+esm"
 // import { fromBlob, fromUrl, Pool, getDecoder, globals } from "./geotiff.js"
 
 /** 
@@ -43,7 +71,7 @@ class Imagebox3 {
     this.tiff.slideImages = await getSlideImagesInPyramid(this.tiff)
 
     const { width: maxWidth, height: maxHeight } = this.tiff.slideImages.reduce((largestImageDimensions, image) => {
-      if (largestImageDimensions.width < image.getWidth() && largestImageDimensions.height < image.getHeight()) {
+      if (largestImageDimensions.width &lt; image.getWidth() &amp;&amp; largestImageDimensions.height &lt; image.getHeight()) {
         largestImageDimensions.width = image.getWidth()
         largestImageDimensions.height = image.getHeight()
       }
@@ -140,7 +168,7 @@ class Imagebox3 {
    * @async
    * @param {number} thumbnailWidth - The width of the thumbnail image to be returned.
    * @param {number} thumbnailHeight - The height of the thumbnail image to be returned.
-   * @returns {Response<Blob>}
+   * @returns {Response&lt;Blob>}
    */
   async getThumbnail(thumbnailWidth, thumbnailHeight) {
     const tileParams = {
@@ -161,7 +189,7 @@ class Imagebox3 {
    * @param {number} tileHeightInImage - The height of the bounding box for the tile.
    * @param {number} tileResolutionToRender - The resolution in which the tile should be returned.
    * @param {number} [imageIndex] - The index of the image in the pyramid to be specifically used to retrieve the tile.
-   * @returns {Response<Blob>}
+   * @returns {Response&lt;Blob>}
    */
   async getTile(topLeftX, topLeftY, tileWidthInImage, tileHeightInImage, tileResolutionToRender, imageIndex=-1) {
     const tileParams = {
@@ -210,7 +238,7 @@ const utils = {
     // if (!tiffPyramid.imageWidthRatios) {
     //   tiffPyramid.imageWidthRatios = []
       const slideImages = imagePyramid.slideImages || await getSlideImagesInPyramid(imagePyramid)
-      for (let imageIndex = 0; imageIndex < slideImages.length; imageIndex++) {
+      for (let imageIndex = 0; imageIndex &lt; slideImages.length; imageIndex++) {
         const imageWidth = slideImages[imageIndex].getWidth()
         const maxImageWidth = slideImages[0].getWidth()
         imageWidthRatios.push(maxImageWidth / imageWidth)
@@ -225,7 +253,7 @@ const utils = {
       bestImageIndex = imageWidthRatios.indexOf(sortedRatios[sortedRatios.length - 1])
 
     }
-    else if (tileWidthRatio <= sortedRatios[1]) {
+    else if (tileWidthRatio &lt;= sortedRatios[1]) {
       // Return the largest image for high magnification tiles
       bestImageIndex = imageWidthRatios.indexOf(sortedRatios[0])
     }
@@ -238,7 +266,7 @@ const utils = {
         bestImageIndex = imageWidthRatios.indexOf(otherRatios[0])
       } else {
         otherRatios.forEach((ratio, index) => {
-          if (tileWidthRatio >= ratio && tileWidthRatio <= sortedRatios[index + 2]) {
+          if (tileWidthRatio >= ratio &amp;&amp; tileWidthRatio &lt;= sortedRatios[index + 2]) {
             bestImageIndex = imageWidthRatios.indexOf(otherRatios[index])
           }
         })
@@ -253,7 +281,7 @@ const utils = {
       RGBAfromYCbCr: (input) => {
         const rgbaRaster = new Uint8ClampedArray(input.length * 4 / 3);
         let i, j;
-        for (i = 0, j = 0; i < input.length; i += 3, j += 4) {
+        for (i = 0, j = 0; i &lt; input.length; i += 3, j += 4) {
           const y = input[i];
           const cb = input[i + 1];
           const cr = input[i + 2];
@@ -268,7 +296,7 @@ const utils = {
       RGBAfromRGB: (input) => {
         const rgbaRaster = new Uint8ClampedArray(input.length * 4 / 3);
         let i, j;
-        for (i = 0, j = 0; i < input.length; i += 3, j += 4) {
+        for (i = 0, j = 0; i &lt; input.length; i += 3, j += 4) {
           rgbaRaster[j] = input[i];
           rgbaRaster[j + 1] = input[i + 1];
           rgbaRaster[j + 2] = input[i + 2];
@@ -279,7 +307,7 @@ const utils = {
       RGBAfromWhiteIsZero: (input, max) => {
         const rgbaRaster = new Uint8ClampedArray(input.length * 4);
         let value;
-        for (let i = 0, j = 0; i < input.length; ++i, j += 3) {
+        for (let i = 0, j = 0; i &lt; input.length; ++i, j += 3) {
           value = 256 - (input[i] / max * 256);
           rgbaRaster[j] = value;
           rgbaRaster[j + 1] = value;
@@ -291,7 +319,7 @@ const utils = {
       RGBAfromBlackIsZero: (input, max) => {
         const rgbaRaster = new Uint8ClampedArray(input.length * 4);
         let value;
-        for (let i = 0, j = 0; i < input.length; ++i, j += 3) {
+        for (let i = 0, j = 0; i &lt; input.length; ++i, j += 3) {
           value = input[i] / max * 256;
           rgbaRaster[j] = value;
           rgbaRaster[j + 1] = value;
@@ -304,7 +332,7 @@ const utils = {
         const rgbaRaster = new Uint8ClampedArray(input.length * 4);
         const greenOffset = colorMap.length / 3;
         const blueOffset = colorMap.length / 3 * 2;
-        for (let i = 0, j = 0; i < input.length; ++i, j += 3) {
+        for (let i = 0, j = 0; i &lt; input.length; ++i, j += 3) {
           const mapIndex = input[i];
           rgbaRaster[j] = colorMap[mapIndex] / 65536 * 256;
           rgbaRaster[j + 1] = colorMap[mapIndex + greenOffset] / 65536 * 256;
@@ -315,7 +343,7 @@ const utils = {
       },
       RGBAfromCMYK: (input) => {
         const rgbaRaster = new Uint8ClampedArray(input.length);
-        for (let i = 0, j = 0; i < input.length; i += 4, j += 4) {
+        for (let i = 0, j = 0; i &lt; input.length; i += 4, j += 4) {
           const c = input[i];
           const m = input[i + 1];
           const y = input[i + 2];
@@ -335,10 +363,10 @@ const utils = {
         const Zn = 1.08883;
         const rgbaRaster = new Uint8ClampedArray(input.length * 4 / 3);
 
-        for (let i = 0, j = 0; i < input.length; i += 3, j += 4) {
+        for (let i = 0, j = 0; i &lt; input.length; i += 3, j += 4) {
           const L = input[i + 0];
-          const a_ = input[i + 1] << 24 >> 24; // conversion from uint8 to int8
-          const b_ = input[i + 2] << 24 >> 24; // same
+          const a_ = input[i + 1] &lt;&lt; 24 >> 24; // conversion from uint8 to int8
+          const b_ = input[i + 2] &lt;&lt; 24 >> 24; // same
 
           let y = (L + 16) / 116;
           let x = (a_ / 500) + y;
@@ -481,7 +509,7 @@ export const getImageSetsInPyramid = async (imagePyramid) => {
     .sort((image1, image2) => image2.getWidth() - image1.getWidth())
     .reduce((sets, image) => {
       const aspectRatio = image.getWidth() / image.getHeight()
-      const aspectRatioSetIndex = sets.findIndex(set => Math.abs(set[0].getWidth() / set[0].getHeight() - aspectRatio) < ASPECT_RATIO_TOLERANCE)
+      const aspectRatioSetIndex = sets.findIndex(set => Math.abs(set[0].getWidth() / set[0].getHeight() - aspectRatio) &lt; ASPECT_RATIO_TOLERANCE)
       if (aspectRatioSetIndex !== -1) {
         sets[aspectRatioSetIndex].push(image)
       } else {
@@ -503,7 +531,7 @@ export const getSlideImagesInPyramid = async (imagePyramid) => {
   const imageSets = imagePyramid.imageSets || await getImageSetsInPyramid(imagePyramid)
 
   const bestSet = imageSets.reduce((largestImageSet, set) => {
-    if (largestImageSet.length === 0 || largestImageSet[0].getWidth() < set[0].getWidth() || (largestImageSet[0].getWidth() === set[0].getWidth() && largestImageSet.length < set.length)) {
+    if (largestImageSet.length === 0 || largestImageSet[0].getWidth() &lt; set[0].getWidth() || (largestImageSet[0].getWidth() === set[0].getWidth() &amp;&amp; largestImageSet.length &lt; set.length)) {
       largestImageSet = set
     }
     return largestImageSet
@@ -524,7 +552,7 @@ export const getImageInfo = async (imagePyramid) => {
   const largestImage = slideImages[0]
   
   let pixelsPerMeter = undefined
-  if (largestImage?.fileDirectory?.ImageDescription && largestImage.fileDirectory.ImageDescription.includes("MPP")) {
+  if (largestImage?.fileDirectory?.ImageDescription &amp;&amp; largestImage.fileDirectory.ImageDescription.includes("MPP")) {
     const micronsPerPixel = largestImage.fileDirectory.ImageDescription.split("|").find(s => s.includes("MPP")).split("=")[1].trim()
     pixelsPerMeter = 1 / (parseFloat(micronsPerPixel) * Math.pow(10, -6))
   }
@@ -549,7 +577,7 @@ export const getImageThumbnail = async (imagePyramid, tileParams, pool) => {
   const parsedTileParams = utils.parseTileParams(tileParams)
   let { thumbnailWidthToRender, thumbnailHeightToRender } = parsedTileParams
 
-  if (!Number.isInteger(thumbnailWidthToRender) && !Number.isInteger(thumbnailHeightToRender)) {
+  if (!Number.isInteger(thumbnailWidthToRender) &amp;&amp; !Number.isInteger(thumbnailHeightToRender)) {
     throw new Error(`Thumbnail Request missing critical parameters: thumbnailWidthToRender:${thumbnailWidthToRender}, thumbnailHeightToRender:${thumbnailHeightToRender}`)
   }
 
@@ -562,7 +590,7 @@ export const getImageThumbnail = async (imagePyramid, tileParams, pool) => {
     imageHeight = imageInfo.height
   }
 
-  const tileSize = Number.isInteger(thumbnailWidthToRender) && Number.isInteger(thumbnailHeightToRender) ? Math.max(thumbnailWidthToRender, thumbnailHeightToRender) : (Number.isInteger(thumbnailWidthToRender) ? thumbnailWidthToRender : thumbnailHeightToRender)
+  const tileSize = Number.isInteger(thumbnailWidthToRender) &amp;&amp; Number.isInteger(thumbnailHeightToRender) ? Math.max(thumbnailWidthToRender, thumbnailHeightToRender) : (Number.isInteger(thumbnailWidthToRender) ? thumbnailWidthToRender : thumbnailHeightToRender)
 
   const thumbnailParams = {
     'tileX': 0,
@@ -592,18 +620,18 @@ export const getImageTile = async (imagePyramid, tileParams, pool, imageIndex=-1
     console.error("Tile Request missing critical parameters!", tileX, tileY, tileWidth, tileHeight)
     return
   }
-  if (!Number.isInteger(tileSize) && !Number.isInteger(tileResolution)) {
+  if (!Number.isInteger(tileSize) &amp;&amp; !Number.isInteger(tileResolution)) {
     tileResolution = Math.max(tileWidth, tileHeight)
   }
   tileResolution = tileResolution || tileSize // To ensure backward compatibility.
   
   let optimalImageInTiff = undefined
-  if(imageIndex >= 0 && imageIndex < imagePyramid.slideImages.length) {
+  if(imageIndex >= 0 &amp;&amp; imageIndex &lt; imagePyramid.slideImages.length) {
     optimalImageInTiff = imagePyramid.slideImages[imageIndex]
   } else {
     optimalImageInTiff = await utils.getImageByRatio(imagePyramid, tileWidth, tileResolution)
   }
-  if (Array.isArray(optimalImageInTiff.fileDirectory["SampleFormat"]) && optimalImageInTiff.fileDirectory["SampleFormat"].length !== optimalImageInTiff.fileDirectory["BitsPerSample"].length) {
+  if (Array.isArray(optimalImageInTiff.fileDirectory["SampleFormat"]) &amp;&amp; optimalImageInTiff.fileDirectory["SampleFormat"].length !== optimalImageInTiff.fileDirectory["BitsPerSample"].length) {
     optimalImageInTiff.fileDirectory["SampleFormat"] = Array(optimalImageInTiff.fileDirectory["BitsPerSample"].length).fill(optimalImageInTiff.fileDirectory["SampleFormat"][0])
   }
 
@@ -650,7 +678,7 @@ export const getImageTile = async (imagePyramid, tileParams, pool, imageIndex=-1
 
 export const createPool = async (tiffImage, numWorkers = 0, supportedDecoders) => {
   let workerPool = undefined
-  if (typeof (Worker) !== 'undefined' && Number.isInteger(numWorkers) && numWorkers > 0) {
+  if (typeof (Worker) !== 'undefined' &amp;&amp; Number.isInteger(numWorkers) &amp;&amp; numWorkers > 0) {
 
     if (!supportedDecoders) {
       supportedDecoders = await setupDecoders()
@@ -694,4 +722,26 @@ export const destroyPool = (workerPool) => {
   return workerPool
 }
 
-export default Imagebox3
+export default Imagebox3</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Imagebox3.html">Imagebox3</a></li></ul><h3>Global</h3><ul><li><a href="global.html#supportedDecoders">supportedDecoders</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.3</a> on Thu Jul 25 2024 14:13:41 GMT-0400 (Eastern Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
