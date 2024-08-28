@@ -345,7 +345,7 @@ $.cleanTileParams = (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
     tileX = tileX >= 0 ? tileX : 0
     tileX = (tileX + tileWidth <= $.imageBoxInstance.tiff.maxWidth) ? tileX : Math.floor($.imageBoxInstance.tiff.maxWidth - tileWidth)
     
-    tileY = !isNaN(Math.round(tileY)) ? Math.round(tileY) : (!isNaN(Math.round($.hashParams['tileY'])) ? Math.round($.hashParams['tileY']) : Math.floor(($.imageBoxInstance.tiff.maxWidth - tileWidth) / 2))
+    tileY = !isNaN(Math.round(tileY)) ? Math.round(tileY) : (!isNaN(Math.round($.hashParams['tileY'])) ? Math.round($.hashParams['tileY']) : Math.floor(($.imageBoxInstance.tiff.maxHeight - tileHeight) / 2))
     tileY = tileY >= 0 ? tileY : 0
     tileY = (tileY + tileHeight <= $.imageBoxInstance.tiff.maxHeight) ? tileY : Math.floor($.imageBoxInstance.tiff.maxHeight - tileHeight)
 
