@@ -425,7 +425,7 @@ $.loadTileOverlay = ({ tileX, tileY, tileWidth, tileHeight, tileResolution }, ov
             const createOverlay = () => {
                 const tileOverlay = document.createElement("div")
                 tileOverlay.id = "tileOverlay"
-                tileOverlay.className = "border border-2 border-dashed border-lime-400 cursor-grab shadow-2xl"
+                tileOverlay.className = "border border-2 border-dashed border-lime-500 cursor-grab shadow-2xl"
                 
                 Object.entries(cleanedTileParams).forEach(([key, val]) => {
                     tileOverlay.setAttribute(`data-${key}`, val)
