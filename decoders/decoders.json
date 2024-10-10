@@ -1,4 +1,13 @@
 {
+    "default": {
+        "5": "LZW",
+        "7": "JPEG",
+        "8": "DEFLATE",
+        "32773": "PackBits",
+        "32946": "DEFLATE",
+        "34887": "LERC",
+        "50001": "WebP"
+    },
     "33003": "decoder_33005.js",
     "33005": "decoder_33005.js"
 }

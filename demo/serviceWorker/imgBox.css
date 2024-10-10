@@ -1,29 +1,29 @@
-/* body {
+body {
   color: navy;
   border-style: solid;
   border-width: 20;
   border-color: white
-} */
+}
 
-/* h1, h1>a {
+h1, h1>a {
   color: brown
-} */
+}
 
-/* sup {
+sup {
   font-size: small;
   color: navy
-} */
+}
 
-/* a:hover {
+a:hover {
   background-color: yellow;
   color: red
-} */
-/* 
+}
+
 #header {
   width: 90%;
   display: flex;
   justify-content: space-between;
-} */
+}
 
 .openseadragon {
   width: 75%;

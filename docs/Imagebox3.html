@@ -28,7 +28,7 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>Imagebox3<span class="signature">(imageSource, numWorkers<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Object}</span></h2>
+        <h2><span class="attribs"><span class="type-signature"></span></span>Imagebox3<span class="signature">(imageSource, numWorkers<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h2>
         
     
 </header>
@@ -41,7 +41,7 @@
     
 
     
-    <h4 class="name" id="Imagebox3"><span class="type-signature"></span>new Imagebox3<span class="signature">(imageSource, numWorkers<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Object}</span></h4>
+    <h4 class="name" id="Imagebox3"><span class="type-signature"></span>new Imagebox3<span class="signature">(imageSource, numWorkers<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
     
 
     
@@ -147,7 +147,7 @@
 
             
 
-            <td class="description last">The number of web workers to be used to to decode image tiles. Defaults to half of the number of logical processors available to the user agent.</td>
+            <td class="description last">The number of web workers to be used to to decode image tiles. Defaults to 0, meaning all decoding operations are performed on the main thread.</td>
         </tr>
 
     
@@ -188,7 +188,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line20">line 20</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line13">line 13</a>
     </li></ul></dd>
     
 
@@ -213,28 +213,6 @@
 
 
 
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    - The Imagebox3 instance.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Object</span>
-
-
-    </dd>
-</dl>
-
-    
 
 
 
@@ -275,7 +253,7 @@
 
 <div class="description">
     Switch image sources without destroying the Imagebox3 instance. Recommended when a new image needs to be loaded instead of
-re-instantiating Imagebox3, so as to avoid spawning a new pool of web workers. Wait for the returned Promise to be fulfilled
+re-instantiating Imagebox3, so as to avoid spawning a new worker pool. Await the fulfilment of the returned Promise
 before running further operations.
 </div>
 
@@ -372,7 +350,7 @@ before running further operations.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line77">line 77</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line69">line 69</a>
     </li></ul></dd>
     
 
@@ -434,7 +412,8 @@ before running further operations.
 
 
 <div class="description">
-    Create a new pool of web workers to be used for decoding image tiles, destroying previously existing web workers.
+    Create a new pool of web workers to be used for decoding image tiles based on the supported decoders. Highly recommended if retrieving
+multiple patches parallelly. Destroys all previously created Imagebox3 worker pools before creating a new one.
 </div>
 
 
@@ -486,7 +465,7 @@ before running further operations.
 
             
 
-            <td class="description last"></td>
+            <td class="description last">The number of web workers in the decoder pool. Defaults to 0, meaning all operations will be performed on the main thread.</td>
         </tr>
 
     
@@ -527,7 +506,7 @@ before running further operations.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line99">line 99</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line92">line 92</a>
     </li></ul></dd>
     
 
@@ -634,7 +613,7 @@ from slowing down the client, since web workers are not destroyed even if their 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line113">line 113</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line106">line 106</a>
     </li></ul></dd>
     
 
@@ -722,7 +701,7 @@ from slowing down the client, since web workers are not destroyed even if their 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line181">line 181</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line177">line 177</a>
     </li></ul></dd>
     
 
@@ -828,7 +807,7 @@ from slowing down the client, since web workers are not destroyed even if their 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line65">line 65</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line57">line 57</a>
     </li></ul></dd>
     
 
@@ -897,8 +876,8 @@ from slowing down the client, since web workers are not destroyed even if their 
 
 
 <div class="description">
-    Retrieve basic information about the largest image in the TIFF, such as its width and height, and the pixels per meter
-metadata corresponding to the slide.
+    Retrieve basic information about the largest image in the TIFF. Currently returns the image width and height, 
+and the pixels per micron corresponding to the slide.
 </div>
 
 
@@ -942,7 +921,7 @@ metadata corresponding to the slide.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line134">line 134</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line130">line 130</a>
     </li></ul></dd>
     
 
@@ -1048,7 +1027,7 @@ metadata corresponding to the slide.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line89">line 89</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line81">line 81</a>
     </li></ul></dd>
     
 
@@ -1110,7 +1089,9 @@ metadata corresponding to the slide.
 
 
 <div class="description">
-    Get the compression methods that the current set of decoders (likely the pool of web workers) support.
+    Get the compression scheme identifiers (as specified in the TIFF format specification) that Imagebox3 can decode. 
+JPEG/LZW/Deflate/WebP are automatically supported, along with JPEG-2000 which is added as an external decoder 
+if the image needs it.
 </div>
 
 
@@ -1154,7 +1135,7 @@ metadata corresponding to the slide.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line123">line 123</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line118">line 118</a>
     </li></ul></dd>
     
 
@@ -1208,7 +1189,7 @@ metadata corresponding to the slide.
     
 
     
-    <h4 class="name" id="getThumbnail"><span class="type-signature">(async) </span>getThumbnail<span class="signature">(thumbnailWidth, thumbnailHeight)</span><span class="type-signature"> &rarr; {Response.&lt;Blob>}</span></h4>
+    <h4 class="name" id="getThumbnail"><span class="type-signature">(async) </span>getThumbnail<span class="signature">(thumbnailWidth, thumbnailHeight)</span><span class="type-signature"> &rarr; {Blob}</span></h4>
     
 
     
@@ -1332,7 +1313,7 @@ metadata corresponding to the slide.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line145">line 145</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line141">line 141</a>
     </li></ul></dd>
     
 
@@ -1368,7 +1349,7 @@ metadata corresponding to the slide.
     </dt>
     <dd>
         
-<span class="param-type">Response.&lt;Blob></span>
+<span class="param-type">Blob</span>
 
 
     </dd>
@@ -1386,7 +1367,7 @@ metadata corresponding to the slide.
     
 
     
-    <h4 class="name" id="getTile"><span class="type-signature">(async) </span>getTile<span class="signature">(topLeftX, topLeftY, tileWidthInImage, tileHeightInImage, tileResolutionToRender, imageIndex<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Response.&lt;Blob>}</span></h4>
+    <h4 class="name" id="getTile"><span class="type-signature">(async) </span>getTile<span class="signature">(topLeftX, topLeftY, tileWidthInImage, tileHeightInImage, tileResolutionToRender, imageIndex<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Blob}</span></h4>
     
 
     
@@ -1656,7 +1637,7 @@ the tile is estimated heuristically, based on the size of the bounding box and t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line166">line 166</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line162">line 162</a>
     </li></ul></dd>
     
 
@@ -1692,7 +1673,7 @@ the tile is estimated heuristically, based on the size of the bounding box and t
     </dt>
     <dd>
         
-<span class="param-type">Response.&lt;Blob></span>
+<span class="param-type">Blob</span>
 
 
     </dd>
@@ -1719,7 +1700,7 @@ the tile is estimated heuristically, based on the size of the bounding box and t
 
 <div class="description">
     Initialize the created Imagebox3 instance by retrieving all Image File Directory metadata from the TIFF file.
-This function needs to be called after instantiation. Any further operations should only be performed after the returned Promise is fulfilled.
+This function needs to be called after instantiation. Any operations should be performed only after the returned Promise is fulfilled.
 </div>
 
 
@@ -1763,7 +1744,7 @@ This function needs to be called after instantiation. Any further operations sho
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line39">line 39</a>
+        <a href="imagebox3.mjs.html">imagebox3.mjs</a>, <a href="imagebox3.mjs.html#line32">line 32</a>
     </li></ul></dd>
     
 
@@ -1827,13 +1808,13 @@ This function needs to be called after instantiation. Any further operations sho
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Imagebox3.html">Imagebox3</a></li></ul><h3>Global</h3><ul><li><a href="global.html#supportedDecoders">supportedDecoders</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Imagebox3.html">Imagebox3</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.3</a> on Thu Jul 25 2024 14:44:11 GMT-0400 (Eastern Daylight Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.3</a> on Thu Oct 10 2024 10:51:01 GMT-0400 (Eastern Daylight Time)
 </footer>
 
 <script> prettyPrint(); </script>

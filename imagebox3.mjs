@@ -1,21 +1,14 @@
 import { fromBlob, fromUrl, Pool, getDecoder, globals } from "https://cdn.jsdelivr.net/npm/geotiff@2.1.2/+esm"
 // import { fromBlob, fromUrl, Pool, getDecoder, globals } from "./geotiff.js"
 
-/** 
- * Class encapsulating all operations on a whole slide image.
- * @class Imagebox3
- * @member {File|string} imageSource
- * @member {Object} tiff
- * @member {number} numWorkers
- * @member {Obejct} workerPool
- * @member {string[]} supportedDecoders
- */
+/* Class representing an Imagebox3 instance of a whole slide image. */
 class Imagebox3 {
+  
   /** 
    * Create an Imagebox3 instance.
+   * @constructor
    * @param {File|string} imageSource - (Required) The local File object or the remote URL referencing the TIFF file.
-   * @param {number} [numWorkers] - The number of web workers to be used to to decode image tiles. Defaults to half of the number of logical processors available to the user agent.
-   * @return {Object} - The Imagebox3 instance.
+   * @param {number} [numWorkers] - The number of web workers to be used to to decode image tiles. Defaults to 0, meaning all decoding operations are performed on the main thread.
    */
   constructor(imageSource, numWorkers) {
     if (imageSource instanceof File || typeof (imageSource) === 'string') {
@@ -25,14 +18,14 @@ class Imagebox3 {
     }
 
     this.tiff = undefined
-    this.numWorkers = typeof (numWorkers) === 'number' ? numWorkers : Math.max(Math.floor(navigator.hardwareConcurrency / 2), 1)
+    this.numWorkers = Number.isInteger(numWorkers) ? numWorkers : 0
     this.workerPool = undefined
     this.supportedDecoders = undefined
   }
 
   /**
    * Initialize the created Imagebox3 instance by retrieving all Image File Directory metadata from the TIFF file.
-   * This function needs to be called after instantiation. Any further operations should only be performed after the returned Promise is fulfilled.
+   * This function needs to be called after instantiation. Any operations should be performed only after the returned Promise is fulfilled.
    * @async
    * @return {Promise}
    */
@@ -61,14 +54,13 @@ class Imagebox3 {
    * Retrieve the image source to the TIFF file that the current Imagebox3 instance is using.
    * @returns {File|string} - The local File object or the remote URL referencing the TIFF file.
    */
-
   getImageSource() {
     return this.imageSource
   }
 
   /**
    * Switch image sources without destroying the Imagebox3 instance. Recommended when a new image needs to be loaded instead of
-   * re-instantiating Imagebox3, so as to avoid spawning a new pool of web workers. Wait for the returned Promise to be fulfilled
+   * re-instantiating Imagebox3, so as to avoid spawning a new worker pool. Await the fulfilment of the returned Promise
    * before running further operations.
    * @async
    * @param {File|string} newImageSource - The local File object or the remote URL referencing the new TIFF file.
@@ -91,13 +83,14 @@ class Imagebox3 {
   }
 
   /**
-   * Create a new pool of web workers to be used for decoding image tiles, destroying previously existing web workers.
+   * Create a new pool of web workers to be used for decoding image tiles based on the supported decoders. Highly recommended if retrieving
+   * multiple patches parallelly. Destroys all previously created Imagebox3 worker pools before creating a new one.
    * @async
-   * @param {number} numWorkers 
+   * @param {number} numWorkers The number of web workers in the decoder pool. Defaults to 0, meaning all operations will be performed on the main thread.
    * @returns {Object}
    */
   async createWorkerPool(numWorkers) {
-    // TODO: Load only the decoders necessary for the current image, instead of having them all active.
+    // TODO: Load only the decoders necessary for the current image, instead of having them all active. Not a major resource drain, but still.
     if (this.workerPool) {
       destroyPool(this.workerPool)
     }
@@ -116,18 +109,21 @@ class Imagebox3 {
   }
 
   /**
-   * Get the compression methods that the current set of decoders (likely the pool of web workers) support.
+   * Get the compression schemes (as specified in the TIFF format specification) that Imagebox3 can decode. 
+   * JPEG/LZW/Deflate/WebP are automatically supported, along with JPEG-2000 which is added as an external decoder 
+   * only if needed.
    * @async
    * @returns {string[]}
    */
   async getSupportedDecoders() {
+    // TODO: Make it possible for users to provide custom decoders.
     this.supportedDecoders = this.supportedDecoders || await setupDecoders()
     return this.supportedDecoders
   }
 
   /**
-   * Retrieve basic information about the largest image in the TIFF, such as its width and height, and the pixels per meter
-   * metadata corresponding to the slide.
+   * Retrieve basic information about the largest image in the TIFF. Currently returns the image width and height, 
+   * and the pixels per micron corresponding to the slide.
    * @async
    * @returns {Object}
    */
@@ -140,7 +136,7 @@ class Imagebox3 {
    * @async
    * @param {number} thumbnailWidth - The width of the thumbnail image to be returned.
    * @param {number} thumbnailHeight - The height of the thumbnail image to be returned.
-   * @returns {Response<Blob>}
+   * @returns {Blob}
    */
   async getThumbnail(thumbnailWidth, thumbnailHeight) {
     const tileParams = {
@@ -161,9 +157,9 @@ class Imagebox3 {
    * @param {number} tileHeightInImage - The height of the bounding box for the tile.
    * @param {number} tileResolutionToRender - The resolution in which the tile should be returned.
    * @param {number} [imageIndex] - The index of the image in the pyramid to be specifically used to retrieve the tile.
-   * @returns {Response<Blob>}
+   * @returns {Blob}
    */
-  async getTile(topLeftX, topLeftY, tileWidthInImage, tileHeightInImage, tileResolutionToRender, imageIndex=-1) {
+  async getTile(topLeftX, topLeftY, tileWidthInImage, tileHeightInImage, tileResolutionToRender, imageIndex = -1) {
     const tileParams = {
       tileX: topLeftX,
       tileY: topLeftY,
@@ -209,15 +205,15 @@ const utils = {
     let imageWidthRatios = []
     // if (!tiffPyramid.imageWidthRatios) {
     //   tiffPyramid.imageWidthRatios = []
-      const slideImages = imagePyramid.slideImages || await getSlideImagesInPyramid(imagePyramid)
-      for (let imageIndex = 0; imageIndex < slideImages.length; imageIndex++) {
-        const imageWidth = slideImages[imageIndex].getWidth()
-        const maxImageWidth = slideImages[0].getWidth()
-        imageWidthRatios.push(maxImageWidth / imageWidth)
-      }
+    const slideImages = imagePyramid.slideImages || await getSlideImagesInPyramid(imagePyramid)
+    for (let imageIndex = 0; imageIndex < slideImages.length; imageIndex++) {
+      const imageWidth = slideImages[imageIndex].getWidth()
+      const maxImageWidth = slideImages[0].getWidth()
+      imageWidthRatios.push(maxImageWidth / imageWidth)
+    }
 
     // }
-// 
+    // 
     const sortedRatios = [...imageWidthRatios].sort((a, b) => a - b).slice(0, -1) // Remove thumbnail from consideration
 
     // If the requested resolution is less than 1/8th the requested tile width, the smallest image should suffice.
@@ -248,8 +244,8 @@ const utils = {
   },
 
   handleConversion: (data, imageFileDirectory) => {
-     // Converters copied from pearcetm/GeoTIFFTileSource
-     const Converters = {
+    // Converters copied from pearcetm/GeoTIFFTileSource
+    const Converters = {
       RGBAfromYCbCr: (input) => {
         const rgbaRaster = new Uint8ClampedArray(input.length * 4 / 3);
         let i, j;
@@ -370,7 +366,7 @@ const utils = {
 
     const { PhotometricInterpretation } = imageFileDirectory;
     let imageData;
-    
+
     switch (PhotometricInterpretation) {
       case globals.photometricInterpretations.WhiteIsZero:  // grayscale, white is zero
         imageData = Converters.RGBAfromWhiteIsZero(data, 2 ** imageFileDirectory.BitsPerSample[0]);
@@ -389,8 +385,8 @@ const utils = {
         imageData = Converters.RGBAfromPalette(data, 2 ** imageFileDirectory.colorMap);
         break;
 
-        // case globals.photometricInterpretations.TransparencyMask: // Transparency Mask
-        // break;
+      // case globals.photometricInterpretations.TransparencyMask: // Transparency Mask
+      // break;
 
       case globals.photometricInterpretations.CMYK:  // CMYK
         imageData = Converters.RGBAfromCMYK(data);
@@ -416,12 +412,11 @@ const utils = {
     const ctx = cv.getContext("2d")
     ctx.putImageData(new ImageData(imageData, width, height), 0, 0)
     const blob = await cv.convertToBlob({
-      type: "image/jpeg",
+      type: "image/png",
       quality: 1.0,
     })
 
-    const response = new Response(blob, { status: 200 })
-    return response
+    return blob
   }
 }
 
@@ -430,6 +425,7 @@ const setupDecoders = async () => {
   const decodersJSON_URL = `${baseURL}/decoders/decoders.json`;
   return await (await fetch(decodersJSON_URL)).json()
 }
+
 
 export const getImagePyramid = async (imageSource, cache = true) => {
   let tiffPyramid
@@ -473,9 +469,9 @@ export const getImageSetsInPyramid = async (imagePyramid) => {
   }
 
   const allImages = imagePyramid.allImages || await getAllImagesInPyramid(imagePyramid)
-  
+
   const ASPECT_RATIO_TOLERANCE = 0.01
-  
+
   const imageSets = allImages
     .filter(image => image.fileDirectory.photometricInterpretation !== globals.photometricInterpretations.TransparencyMask)
     .sort((image1, image2) => image2.getWidth() - image1.getWidth())
@@ -490,7 +486,7 @@ export const getImageSetsInPyramid = async (imagePyramid) => {
       return sets
     }, [])
 
-    return imageSets
+  return imageSets
 }
 
 export const getSlideImagesInPyramid = async (imagePyramid) => {
@@ -519,25 +515,23 @@ export const getImageInfo = async (imagePyramid) => {
   if (typeof (imagePyramid?.ifdRequests) !== 'object') {
     throw new Error("Malformed image pyramid. Please retry pyramid creation using the `getImagePyramid()` method.")
   }
-  
+
   const slideImages = imagePyramid.slideImages || await getSlideImagesInPyramid(imagePyramid)
   const largestImage = slideImages[0]
-  
-  let pixelsPerMeter = undefined
+
+  let pixelsPerMicron = undefined
   if (largestImage?.fileDirectory?.ImageDescription && largestImage.fileDirectory.ImageDescription.includes("MPP")) {
     const micronsPerPixel = largestImage.fileDirectory.ImageDescription.split("|").find(s => s.includes("MPP")).split("=")[1].trim()
-    pixelsPerMeter = 1 / (parseFloat(micronsPerPixel) * Math.pow(10, -6))
+    pixelsPerMicron = 1 / parseFloat(micronsPerPixel)
   }
 
-  const response = new Response(
-    JSON.stringify({
-      'width': largestImage.getWidth(),
-      'height': largestImage.getHeight(),
-      pixelsPerMeter
-    }), { status: 200 }
-  )
+  const imageInfo = {
+    'width': largestImage.getWidth(),
+    'height': largestImage.getHeight(),
+    pixelsPerMicron
+  }
 
-  return response
+  return imageInfo
 }
 
 export const getImageThumbnail = async (imagePyramid, tileParams, pool) => {
@@ -571,14 +565,14 @@ export const getImageThumbnail = async (imagePyramid, tileParams, pool) => {
     'tileHeight': imageHeight,
     'tileSize': tileSize
   }
-  
+
   const thumbnailImage = await getImageTile(imagePyramid, thumbnailParams, pool)
-  
+
   return thumbnailImage
 
 }
 
-export const getImageTile = async (imagePyramid, tileParams, pool, imageIndex=-1) => {
+export const getImageTile = async (imagePyramid, tileParams, pool, imageIndex = -1) => {
   // Get individual tiles from the appropriate image in the pyramid.
 
   if (typeof (imagePyramid?.ifdRequests) !== 'object') {
@@ -596,9 +590,9 @@ export const getImageTile = async (imagePyramid, tileParams, pool, imageIndex=-1
     tileResolution = Math.max(tileWidth, tileHeight)
   }
   tileResolution = tileResolution || tileSize // To ensure backward compatibility.
-  
+
   let optimalImageInTiff = undefined
-  if(imageIndex >= 0 && imageIndex < imagePyramid.slideImages.length) {
+  if (imageIndex >= 0 && imageIndex < imagePyramid.slideImages.length) {
     optimalImageInTiff = imagePyramid.slideImages[imageIndex]
   } else {
     optimalImageInTiff = await utils.getImageByRatio(imagePyramid, tileWidth, tileResolution)
@@ -609,7 +603,7 @@ export const getImageTile = async (imagePyramid, tileParams, pool, imageIndex=-1
 
   const optimalImageWidth = optimalImageInTiff.getWidth()
   const optimalImageHeight = optimalImageInTiff.getHeight()
-  
+
   let tileWidthToRender, tileHeightToRender
   if (tileWidth > tileHeight) {
     tileHeightToRender = Math.floor(tileHeight * tileResolution / tileWidth)
@@ -644,14 +638,20 @@ export const getImageTile = async (imagePyramid, tileParams, pool, imageIndex=-1
 
   const data = await optimalImageInTiff.readRasters(geotiffParameters)
 
-  const imageResponse = await utils.convertToImageBlob(data, tileWidthToRender, tileHeightToRender, optimalImageInTiff.fileDirectory)
-  return imageResponse
+  const imageBlob = await utils.convertToImageBlob(data, tileWidthToRender, tileHeightToRender, optimalImageInTiff.fileDirectory)
+  return imageBlob
 }
 
 export const createPool = async (tiffImage, numWorkers = 0, supportedDecoders) => {
   let workerPool = undefined
-  if (typeof (Worker) !== 'undefined' && Number.isInteger(numWorkers) && numWorkers > 0) {
+  if (typeof (Worker) === 'undefined') {
+    console.warn("Worker pool creation failed. The environment does not support web workers. All operations shall run on the main thread.")
+    return workerPool
+  }
 
+  if (numWorkers === 0) {
+    return workerPool
+  } else if (Number.isInteger(numWorkers) && numWorkers > 0) {
     if (!supportedDecoders) {
       supportedDecoders = await setupDecoders()
     }
@@ -681,7 +681,7 @@ export const createPool = async (tiffImage, numWorkers = 0, supportedDecoders) =
     }
 
     workerPool = new Pool(Math.min(Math.floor(navigator.hardwareConcurrency / 2), numWorkers), createWorker)
-    workerPool.supportedCompression = imageCompression
+    workerPool.supportedCompression = imageCompression // Explicitly specify that the current worker pool supports the image's compression scheme.
 
     await new Promise(res => setTimeout(res, 500)) // Setting up the worker pool is an asynchronous task, give it time to complete before moving on.
   }
@@ -692,6 +692,7 @@ export const destroyPool = (workerPool) => {
   workerPool?.destroy()
   workerPool = undefined
   return workerPool
-}
+};
 
+export { Imagebox3 }
 export default Imagebox3
