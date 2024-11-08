@@ -207,7 +207,7 @@ $.createTileSource = async (url) => {
     console.log(await $.imagebox3Instance.getInfo())
     let tileSources = {}
     try {
-        tileSources = await OpenSeadragon.GeoTIFFTileSource.getAllTileSources(url, { logLatency: false, cache: false, slideOnly: true, pool: $.imagebox3Instance.workerPool })
+        tileSources = await OpenSeadragon.GeoTIFFTileSource.getAllTileSources(url, { logLatency: false, cache: true, slideOnly: true, pool: $.imagebox3Instance.workerPool })
     }
     catch (e) {
         console.error(e)
