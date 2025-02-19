@@ -204,7 +204,7 @@ $.createTileSource = async (url) => {
     else {
         await $.imagebox3Instance.changeImageSource(url)
     }
-    console.log(await $.imagebox3Instance.getInfo())
+
     let tileSources = {}
     try {
         tileSources = await OpenSeadragon.GeoTIFFTileSource.getAllTileSources(url, { logLatency: false, cache: true, slideOnly: true, pool: $.imagebox3Instance.workerPool })
@@ -286,7 +286,8 @@ $.loadImage = async (source) => {
 
 $.loadRemoteImage = async (wsiURL, resetPanAndZoom = true, resetTileParams = false) => {
     if ($.imagebox3Instance?.getImageSource() !== wsiURL) {
-
+        $.togglePatchViewer(false)
+        
         if (resetPanAndZoom) {
             $.removePanAndZoomFromHash()
         }
@@ -311,18 +312,10 @@ $.loadRemoteImage = async (wsiURL, resetPanAndZoom = true, resetTileParams = fal
             tileResolution: $.hashParams['tileResolution']
         })
     }
-
-    document.getElementById("copyTileURL").removeAttribute("disabled")
-    document.getElementById("copyTileURL").classList.replace("bg-gray-600", "bg-indigo-600")
-    document.getElementById("copyTileURL").classList.add("hover:bg-indigo-500")
-    document.getElementById("copyTileURL").classList.add("focus-visible:outline")
-    document.getElementById("copyTileURL").classList.add("focus-visible:outline-2")
-    document.getElementById("copyTileURL").classList.add("focus-visible:outline-offset-2")
-    document.getElementById("copyTileURL").classList.add("focus-visible:outline-indigo-600")
-    document.getElementById("copyTileURL").classList.remove("cursor-not-allowed")
 }
 
 $.loadLocalImage = async (file) => {
+    $.togglePatchViewer(false)
     $.removePanAndZoomFromHash()
     $.modifyHashString({
         'localFile': file.name,
@@ -340,19 +333,11 @@ $.loadLocalImage = async (file) => {
         tileResolution: $.hashParams['tileResolution']
     })
 
-    document.getElementById("copyTileURL").setAttribute("disabled", true)
-    document.getElementById("copyTileURL").classList.replace("bg-indigo-600", "bg-gray-600")
-    document.getElementById("copyTileURL").classList.remove("hover:bg-indigo-500")
-    document.getElementById("copyTileURL").classList.remove("focus-visible:outline")
-    document.getElementById("copyTileURL").classList.remove("focus-visible:outline-2")
-    document.getElementById("copyTileURL").classList.remove("focus-visible:outline-offset-2")
-    document.getElementById("copyTileURL").classList.remove("focus-visible:outline-indigo-600")
-    document.getElementById("copyTileURL").classList.add("cursor-not-allowed")
 }
 
 $.loadDefaultImage = async () => {
     const defaultWSIURL = "https://storage.googleapis.com/imagebox_test/openslide-testdata/Aperio/CMU-1.svs"
-    // $.loadRemoteImage(defaultWSIURL)
+    $.loadRemoteImage(defaultWSIURL)
 }
 
 $.cleanTileParams = (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
@@ -528,12 +513,81 @@ $.loadTileOverlay = async ({ tileX, tileY, tileWidth, tileHeight, tileResolution
     }
 }
 
-$.loadTile = async (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
-    const tileElement = document.getElementById("tileImg")
+$.toggleTileParamsDisabled = (disable=true) => {
+    if (disable) {
+        document.querySelectorAll(".unitsSelector").forEach(el => el.setAttribute("disabled", "true"))
+        document.querySelectorAll(".tileParams").forEach(el => el.setAttribute("disabled", "true"))
+        document.getElementById("copyTileURL").classList.add("disabled")
+        document.getElementById("downloadTile").classList.add("disabled")
+    } else {
+        document.querySelectorAll(".unitsSelector").forEach(el => el.removeAttribute("disabled"))
+        document.querySelectorAll(".tileParams").forEach(el => el.removeAttribute("disabled"))
+        document.getElementById("copyTileURL").classList.remove("disabled")
+        document.getElementById("downloadTile").classList.remove("disabled")
+    }
+    $.togglePatchButtonsDisabled(disable)
+}
 
+$.togglePatchButtonsDisabled = (disabled=true, buttons=["copyTileURL", "downloadTile"]) => {
+    if (!Array.isArray(buttons)) {
+        buttons = [buttons]
+    }
+    buttons.forEach(buttonId => {
+        const buttonElement = document.getElementById(buttonId)
+        if (buttonElement) {
+
+            if (disabled) {
+                buttonElement.setAttribute("disabled", true)
+                buttonElement.classList.replace("bg-indigo-600", "bg-gray-600")
+                buttonElement.classList.remove("hover:bg-indigo-500")
+                buttonElement.classList.remove("focus-visible:outline")
+                buttonElement.classList.remove("focus-visible:outline-2")
+                buttonElement.classList.remove("focus-visible:outline-offset-2")
+                buttonElement.classList.remove("focus-visible:outline-indigo-600")
+                buttonElement.classList.remove("active:bg-indigo-800")
+                buttonElement.classList.add("cursor-not-allowed")
+            } else {
+                buttonElement.removeAttribute("disabled")
+                buttonElement.classList.replace("bg-gray-600", "bg-indigo-600")
+                buttonElement.classList.add("hover:bg-indigo-500")
+                buttonElement.classList.add("focus-visible:outline")
+                buttonElement.classList.add("focus-visible:outline-2")
+                buttonElement.classList.add("focus-visible:outline-offset-2")
+                buttonElement.classList.add("focus-visible:outline-indigo-600")
+                buttonElement.classList.add("active:bg-indigo-800")
+                buttonElement.classList.remove("cursor-not-allowed")
+            }
+
+        }
+    })
+}
+
+$.togglePatchViewer = (show=true) => {
+    if (show) {
+        document.getElementById("tileViewer").classList.remove("hidden")
+    } else {
+        document.getElementById("tileViewer").classList.add("hidden")
+    }
+}
+
+$.toggleLoadingSpinner = (show=true) => {
+    if (show) {
+        document.getElementById("patchLoadingSpinner").classList.remove("hidden")
+    } else {
+        document.getElementById("patchLoadingSpinner").classList.add("hidden")
+    }
+}
+
+$.loadTile = async (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
+    $.togglePatchViewer(true)
+    $.toggleTileParamsDisabled(true)
+    $.toggleLoadingSpinner(true)
+    const tileElement = document.getElementById("tileImg")
+    
     tileElement.src = URL.createObjectURL(await $.imagebox3Instance.getTile(tileX, tileY, tileWidth, tileHeight, tileResolution))
     tileElement.onload = () => {
-        document.getElementById("tileViewer").classList.remove("hidden")
+        $.toggleLoadingSpinner(false)
+        $.toggleTileParamsDisabled(false)
 
         document.getElementById("tileResolution").value = Math.round(tileElement.getBoundingClientRect().width)
         document.getElementById("tileResCopy").innerText = Math.round(tileElement.getBoundingClientRect().height)
