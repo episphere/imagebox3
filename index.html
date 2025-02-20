@@ -6,7 +6,7 @@
 </head>
 
 <body>
-    <div id="container" class="h-full flex flex-col p-3 overflow-x-auto">
+    <div id="container" class="h-full flex flex-col px-3 py-2 overflow-x-auto">
 
         <div id="header" class="h-12 flex flex-row flex-initial justify-start pb-1">
             <span>
@@ -38,14 +38,13 @@
             </span>
         </div>
         <hr/>
-        <div class="w-full py-2">
-            <p class="min-w-screen max-w-7xl pb-1 text-gray-700 text-justify">ImageBox3 is a JavaScript library for zero-footprint, in-browser patch extraction from TIFF-based Whole Slide Imaging (WSI) data. No (server-side) tiling service needed! 
+        <div class="w-full py-1">
+            <p class="min-w-screen max-w-7xl text-gray-700 text-justify">ImageBox3 is a JavaScript library for zero-footprint, in-browser patch extraction from TIFF-based Whole Slide Imaging (WSI) data. No (server-side) tiling service needed! 
                 All computation is performed on your device using HTTP Range Requests to retrieve remote patches without downloading the entire image. This ensures complete user governance while operating public and private images alike at zero cost. 
                 ImageBox3 is freely usable and immediately portable to any device with a web browser. Try it below:</p>
-            <p class="text-gray-700">(The viewer on the left uses <a href="https://openseadragon.github.io/" class="cursor-pointer text-indigo-600 underline">OpenSeadragon</a> + <a href="https://github.com/episphere/GeoTIFFTileSource-JPEG2k" class="cursor-pointer text-indigo-600 underline">a fork</a> of the <a href="https://github.com/pearcetm/GeoTIFFTileSource" class="cursor-pointer text-indigo-600 underline">GeoTIFFTileSource plugin</a>.)</p>
         </div>
         <hr/>
-        <div id="dataInput" class="w-full h-12 flex flex-initial justify-start py-1.5 align-middle">
+        <div id="dataInput" class="w-full h-full flex flex-initial justify-start pt-1 align-middle">
             
             <form class="w-full h-full flex-auto flex gap-x-1" id="wsiURLForm">
                 <input type="url" name="wsiURL" id="wsiURL"
@@ -108,7 +107,7 @@
             </span>
         </div>
         
-        <div id="demoLinks" class="w-max h-4 flex-initial grid grid-flow-col gap-x-3 justify-center">
+        <div id="demoLinks" class="w-max h-max flex-initial grid grid-flow-col pt-1 gap-x-3 justify-center">
             
             <span class="text-sm text-red-800">Demos:</span>
             
@@ -154,7 +153,7 @@
         </div>
         
         
-        <div id="imageViewerParent" class="w-max h-full grid auto-rows-min gap-x-5 mt-4" style="grid-template-columns: 60vw auto;">
+        <div id="imageViewerParent" class="w-max h-full grid auto-rows-min gap-x-5 mt-3" style="grid-template-columns: 65vw auto;">
             
             <div id="wsiViewer" class="w-full min-w-full h-full">
                 <div id="viewer" class="w-full h-full overflow-hidden">
@@ -168,6 +167,7 @@
                     <div id="openseadragon" class="openseadragon w-full h-full bg-black" style="min-height: 75vh; max-height: 85vh;"></div>
             
                 </div>
+                <p class="text-gray-700">(The viewer uses <a href="https://openseadragon.github.io/" class="cursor-pointer text-indigo-600 underline">OpenSeadragon</a> + <a href="https://github.com/episphere/GeoTIFFTileSource-JPEG2k" class="cursor-pointer text-indigo-600 underline">a fork</a> of the <a href="https://github.com/pearcetm/GeoTIFFTileSource" class="cursor-pointer text-indigo-600 underline">GeoTIFFTileSource plugin</a>.)</p>
             </div>
             
             <div id="tileViewer" class="hidden w-full min-w-72 grid grid-flow-row auto-rows-min gap-y-1">
