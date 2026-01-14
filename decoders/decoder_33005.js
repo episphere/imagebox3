@@ -1,5 +1,5 @@
 importScripts("https://cdn.jsdelivr.net/npm/@cornerstonejs/codec-openjpeg@1.2.3/dist/openjpegwasm.js");
-importScripts("https://cdn.jsdelivr.net/npm/geotiff@2.0.7");
+importScripts("https://cdn.jsdelivr.net/npm/geotiff");
 
 let decoder = {}
 OpenJPEGWASM({ 'locateFile': (path, scriptDirectory) => "https://cdn.jsdelivr.net/npm/@cornerstonejs/codec-openjpeg@1.2.3/dist/" + path }).then(openjpegWASM => {
@@ -25,6 +25,5 @@ self.addEventListener('message', async (e) => {
     const { id, fileDirectory, buffer } = e.data;
     const decoder = await GeoTIFF.getDecoder(fileDirectory);
     const decoded = await decoder.decode(fileDirectory, buffer);
-    // console.log(decoded)
     self.postMessage({ decoded, id }, [decoded]);
 });

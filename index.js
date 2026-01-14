@@ -1,4 +1,6 @@
 import Imagebox3 from "./imagebox3.mjs"
+import { createTileSource } from "https://prafulb.github.io/WSITileSource/wsiTileSource.js"
+// import { createTileSource } from "https://prafulb.github.io/OpenSlideTileSource/OpenSlideTileSource.js"
 
 const $ = {}
 $.hashParams = {}
@@ -21,7 +23,8 @@ $.default = {
         imageLoaderLimit: 5,
         timeout: 1000 * 1000,
         crossOriginPolicy: "Anonymous",
-        zoomPerScroll: 2
+        zoomPerScroll: 2,
+        immediate: true
     }
 }
 
@@ -196,8 +199,8 @@ $.progressBar = (show = true, immediate = false) => {
 
 $.createTileSource = async (url) => {
     // Create a tile source for the image.
+    let numWorkers = 4
     if (!$.imagebox3Instance) {
-        const numWorkers = Math.floor(navigator.hardwareConcurrency / 2)
         $.imagebox3Instance = new Imagebox3(url, numWorkers)
         await $.imagebox3Instance.init()
     }
@@ -207,7 +210,8 @@ $.createTileSource = async (url) => {
 
     let tileSources = {}
     try {
-        tileSources = await OpenSeadragon.GeoTIFFTileSource.getAllTileSources(url, { logLatency: false, cache: true, slideOnly: true, pool: $.imagebox3Instance.workerPool })
+        tileSources = await createTileSource(url, numWorkers, { tileSize: 256 })
+        // tileSources = await OpenSeadragon.GeoTIFFTileSource.getAllTileSources(url, { cache: false, logLatency: true, slideOnly: true, pool: $.imagebox3Instance.workerPool });
     }
     catch (e) {
         console.error(e)
@@ -287,7 +291,7 @@ $.loadImage = async (source) => {
 $.loadRemoteImage = async (wsiURL, resetPanAndZoom = true, resetTileParams = false) => {
     if ($.imagebox3Instance?.getImageSource() !== wsiURL) {
         $.togglePatchViewer(false)
-        
+
         if (resetPanAndZoom) {
             $.removePanAndZoomFromHash()
         }
@@ -416,7 +420,7 @@ $.updateTileParams = async (tileX, tileY, tileWidth, tileHeight, tileResolution)
             tileResolution
         })
     }
-    return didUpdateTileParams
+    return { didUpdateTileParams, tileX, tileY, tileWidth, tileHeight, tileResolution }
 }
 
 $.loadTileOverlay = async ({ tileX, tileY, tileWidth, tileHeight, tileResolution }, overlayOnly = false) => {
@@ -427,7 +431,7 @@ $.loadTileOverlay = async ({ tileX, tileY, tileWidth, tileHeight, tileResolution
         }, { once: true })
     } else {
         const cleanedTileParams = $.cleanTileParams(tileX, tileY, tileWidth, tileHeight, tileResolution)
-        const didUpdateTileParams = await $.updateTileParams(...Object.values(cleanedTileParams))
+        const { didUpdateTileParams } = await $.updateTileParams(...Object.values(cleanedTileParams))
 
         if (didUpdateTileParams || $.viewer.currentOverlays.length === 0) {
             const createOverlay = () => {
@@ -482,12 +486,13 @@ $.loadTileOverlay = async ({ tileX, tileY, tileWidth, tileHeight, tileResolution
                         }
                     },
 
-                    dragEndHandler: () => {
+                    dragEndHandler: async () => {
                         const overlay = $.viewer.getOverlayById(tileOverlay);
                         overlay.element.style.cursor = "grab";
-                        const { x: tileX, y: tileY, width: tileWidth, height: tileHeight } = $.viewer.world.getItemAt(0).viewportToImageRectangle(overlay.bounds)
-                        $.updateTileParams(tileX, tileY, tileWidth, tileHeight, Math.round($.hashParams['tileResolution']))
-                        $.loadTile(tileX, tileY, tileWidth, tileHeight, Math.round($.hashParams['tileResolution']))
+                        const { x, y, width, height } = $.viewer.world.getItemAt(0).viewportToImageRectangle(overlay.bounds)
+
+                        const { tileX, tileY, tileWidth, tileHeight, tileResolution } = await $.updateTileParams(x, y, width, height, Math.round($.hashParams['tileResolution']))
+                        $.loadTile(tileX, tileY, tileWidth, tileHeight, tileResolution)
                     }
                 })
 
@@ -513,7 +518,7 @@ $.loadTileOverlay = async ({ tileX, tileY, tileWidth, tileHeight, tileResolution
     }
 }
 
-$.toggleTileParamsDisabled = (disable=true) => {
+$.toggleTileParamsDisabled = (disable = true) => {
     if (disable) {
         document.querySelectorAll(".unitsSelector").forEach(el => el.setAttribute("disabled", "true"))
         document.querySelectorAll(".tileParams").forEach(el => el.setAttribute("disabled", "true"))
@@ -528,7 +533,7 @@ $.toggleTileParamsDisabled = (disable=true) => {
     $.togglePatchButtonsDisabled(disable)
 }
 
-$.togglePatchButtonsDisabled = (disabled=true, buttons=["copyTileURL", "downloadTile"]) => {
+$.togglePatchButtonsDisabled = (disabled = true, buttons = ["copyTileURL", "downloadTile"]) => {
     if (!Array.isArray(buttons)) {
         buttons = [buttons]
     }
@@ -562,7 +567,7 @@ $.togglePatchButtonsDisabled = (disabled=true, buttons=["copyTileURL", "download
     })
 }
 
-$.togglePatchViewer = (show=true) => {
+$.togglePatchViewer = (show = true) => {
     if (show) {
         document.getElementById("tileViewer").classList.remove("hidden")
     } else {
@@ -570,7 +575,7 @@ $.togglePatchViewer = (show=true) => {
     }
 }
 
-$.toggleLoadingSpinner = (show=true) => {
+$.toggleLoadingSpinner = (show = true) => {
     if (show) {
         document.getElementById("patchLoadingSpinner").classList.remove("hidden")
     } else {
@@ -582,10 +587,12 @@ $.loadTile = async (tileX, tileY, tileWidth, tileHeight, tileResolution) => {
     $.togglePatchViewer(true)
     $.toggleTileParamsDisabled(true)
     $.toggleLoadingSpinner(true)
+
     const tileElement = document.getElementById("tileImg")
-    
     tileElement.src = URL.createObjectURL(await $.imagebox3Instance.getTile(tileX, tileY, tileWidth, tileHeight, tileResolution))
+
     tileElement.onload = () => {
+
         $.toggleLoadingSpinner(false)
         $.toggleTileParamsDisabled(false)
 
